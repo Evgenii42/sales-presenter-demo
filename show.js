@@ -213,6 +213,7 @@ if (location.protocol === "file:") {
   showClientMessage("Запустите демо через локальный HTTP-сервер. Команда есть в инструкции рядом с файлами.");
 } else if (!manager && /^[a-f\d-]{36}$/i.test(location.hash.slice(1))) {
   const session = location.hash.slice(1);
+  startCatalogViewer(session);
   if (window.presenterConfig) {
     import("./network.js").then(({ startNetworkClient }) => startNetworkClient(session))
       .catch(() => showClientMessage("Не удалось подключиться к показу. Обновите страницу."));

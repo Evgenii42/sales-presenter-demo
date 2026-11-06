@@ -4,7 +4,7 @@ function startManager(session, send) {
     U08: "Уточните, как человек обычно возвращается домой. Если он назвал коляску и хочет посмотреть маршрут, откройте ветку.",
     H02: "Попросите назвать самый неудобный участок привычного пути. Покажите, какие места проверите в конкретной секции.",
     U19: "Подтвердите комнатность и верхнюю границу цены. Условия вроде проезда с коляской проверим отдельно в карточке и на плане секции.",
-    U20: "Откройте каталог или карту. Выберите квартиру и покажите, где в её карточке проверить планировку, генплан и условия бронирования."
+    U20: "Откройте каталог или карту и включите показ вкладки. В карточке квартиры покажите планировку, генплан и условия бронирования."
   };
   const nextScene = { U01: "U08", U08: "U19", H02: "U19", U19: "U20" };
   const route = ["U01"];
@@ -13,6 +13,7 @@ function startManager(session, send) {
   const options = { signal: events.signal };
   const roomCount = byId("room-count");
   const priceLimit = byId("price-limit");
+  const catalogShare = startCatalogPublisher(session);
   let catalog;
   let mouse = null;
   let frame = null;
@@ -63,6 +64,7 @@ function startManager(session, send) {
     byId("next").textContent = nextLabel[id] || "Далее";
     byId("branch").hidden = id !== "U08";
     byId("catalog-filters").hidden = id !== "U19";
+    catalogShare.show(id === "U20");
     publish();
   }
 
@@ -92,6 +94,7 @@ function startManager(session, send) {
   return {
     publish,
     close() {
+      catalogShare.close();
       events.abort();
       observer.disconnect();
       if (frame !== null) cancelAnimationFrame(frame);

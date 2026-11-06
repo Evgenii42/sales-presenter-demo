@@ -4,10 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Менеджер · Показ квартиры</title>
-  <link rel="stylesheet" href="show.css?v=catalog-1">
+  <link rel="stylesheet" href="show.css?v=catalog-2">
   <script src="network-config.js" defer></script>
-  <script src="show.js?v=catalog-1" defer></script>
-  <script src="manager.js?v=catalog-1" defer></script>
+  <script src="catalog-share.js" defer></script>
+  <script src="show.js?v=catalog-2" defer></script>
+  <script src="manager.js?v=catalog-2" defer></script>
 </head>
 <body data-role="manager">
   <header class="bar">
@@ -97,6 +98,10 @@
             <input id="price-limit" type="number" min="1" max="1000000000" step="1" placeholder="Не указана">
             <p class="footnote">Эти параметры попадут в ссылку на каталог после перехода к подбору.</p>
           </fieldset>
+          <section id="catalog-share" class="catalog-share" aria-label="Демонстрация каталога" hidden>
+            <button id="share-catalog" type="button" class="primary">Показать вкладку</button>
+            <p id="catalog-share-status" class="footnote" role="status"></p>
+          </section>
           <div class="answer">
             <label for="confirmed">Ответ клиента</label>
             <textarea id="confirmed" rows="4" placeholder="Запишите ответ словами клиента"></textarea>

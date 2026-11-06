@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Клиент · Показ квартиры</title>
-  <link rel="stylesheet" href="show.css?v=catalog-1">
+  <link rel="stylesheet" href="show.css?v=catalog-2">
   <script src="network-config.js" defer></script>
-  <script src="show.js?v=catalog-1" defer></script>
+  <script src="catalog-share.js" defer></script>
+  <script src="show.js?v=catalog-2" defer></script>
 </head>
 <body data-role="client">
   <header class="bar">
@@ -19,6 +20,10 @@
   <main class="layout client-panel">
     <section id="stage" class="stage" aria-label="Общий кадр">
       <p class="waiting" role="status">Подключаемся к показу…</p>
+    </section>
+    <section id="catalog-live" class="catalog-live" aria-label="Прямой показ вкладки" hidden>
+      <h1>Подбор квартир · Прямой показ</h1>
+      <video id="catalog-video" autoplay muted playsinline></video>
     </section>
   </main>
 </body>

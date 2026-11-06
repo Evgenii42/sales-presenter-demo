@@ -4,4 +4,4 @@ disableKinds = ["home", "section", "taxonomy", "term", "RSS", "sitemap", "robots
 [[module.mounts]]
 source = "."
 target = "static"
-files = ["index.html", "client.html", "show.css", "show.js", "manager.js", "network.js", "network-config.js"]
+files = ["index.html", "client.html", "show.css", "show.js", "manager.js", "catalog-share.js", "network.js", "network-config.js"]
