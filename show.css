@@ -115,7 +115,8 @@ h2 { margin: .2rem 0; font-size: 1.04rem; line-height: 1.28; }
 .catalog-share { display: grid; gap: 7px; flex-shrink: 0; padding: 10px; border-radius: 16px; background: var(--blue-soft); }
 .catalog-live { position: absolute; inset: 12px 14px 14px; z-index: 2; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 9px; padding: 12px; border-radius: 22px; background: #fff; }
 .catalog-live h1 { padding: 4px; font-size: 1.1rem; }
-.catalog-live video { width: 100%; height: 100%; min-height: 0; border-radius: 13px; background: #222735; object-fit: contain; }
+.catalog-live canvas { width: 100%; height: 100%; min-height: 0; border-radius: 13px; background: #222735; object-fit: contain; }
+.catalog-view-status { position: absolute; z-index: 3; inset: auto 24px 24px; width: fit-content; max-width: calc(100% - 48px); margin: 0; padding: .65rem .85rem; border-radius: 14px; background: var(--blue-soft); color: #30384b; }
 .answer { min-height: 112px; display: flex; flex: 1 0 auto; flex-direction: column; }
 .answer label { font-size: .9rem; color: #515c74; font-weight: 650; margin-bottom: .35rem; }
 textarea { width: 100%; min-height: 64px; flex: 1; resize: vertical; padding: 0; border: 0; background: transparent; font: inherit; color: inherit; }

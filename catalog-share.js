@@ -1,22 +1,4 @@
-async function localVideoDescription(peer, description) {
-  await peer.setLocalDescription(description);
-  if (peer.iceGatheringState !== "complete") {
-    await new Promise((resolve) => {
-      const timeout = setTimeout(finish, 3000);
-      function finish() {
-        clearTimeout(timeout);
-        peer.removeEventListener("icegatheringstatechange", check);
-        resolve();
-      }
-      function check() {
-        if (peer.iceGatheringState === "complete") finish();
-      }
-      peer.addEventListener("icegatheringstatechange", check);
-      check();
-    });
-  }
-  return peer.localDescription?.toJSON();
-}
+const catalogFrameWait = 6500;
 
 function catalogVideoChannel(session) {
   return new BroadcastChannel(`presenter-video:${session}`);
@@ -26,95 +8,113 @@ function startCatalogPublisher(session) {
   const section = document.getElementById("catalog-share");
   const button = document.getElementById("share-catalog");
   const status = document.getElementById("catalog-share-status");
-  const instructions = "Сначала откройте каталог или карту, затем выберите эту вкладку Chrome или Edge.";
-  const available = Boolean(navigator.mediaDevices?.getDisplayMedia && window.RTCPeerConnection && window.BroadcastChannel);
+  const instructions = "Откройте каталог или карту, затем выберите эту вкладку Chrome или Edge.";
+  const available = Boolean(navigator.mediaDevices?.getDisplayMedia && window.MediaStreamTrackProcessor
+    && window.OffscreenCanvas && window.BroadcastChannel);
   const channel = available ? catalogVideoChannel(session) : null;
   const events = new AbortController();
-  const peers = new Map();
-  let stream;
+  let active;
   let request = 0;
-
-  function removePeer(viewer) {
-    const peer = peers.get(viewer);
-    peers.delete(viewer);
-    peer?.close();
-  }
 
   function stop(message = instructions) {
     request++;
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      stream = undefined;
+    const previous = active;
+    active = undefined;
+    if (previous) {
+      clearTimeout(previous.waiting);
+      previous.reader.cancel().catch(() => {});
+      previous.stream.getTracks().forEach((track) => track.stop());
       channel.postMessage({ type: "stop" });
     }
-    for (const viewer of peers.keys()) removePeer(viewer);
     button.disabled = !available;
     button.textContent = "Показать вкладку";
     status.textContent = available ? message : "Для показа вкладки откройте панель в Chrome или Edge.";
   }
 
-  async function offerVideo(viewer) {
-    if (!stream || peers.has(viewer)) return;
-    const peer = new RTCPeerConnection();
-    peers.set(viewer, peer);
-    peer.onconnectionstatechange = () => {
-      if (peer.connectionState === "failed" && peers.get(viewer) === peer) removePeer(viewer);
-    };
+  async function publishFrames(capture) {
+    const canvas = new OffscreenCanvas(1, 1);
+    const context = canvas.getContext("2d", { alpha: false });
+    let stopMessage = "Показ вкладки завершён.";
     try {
-      peer.addTrack(stream.getVideoTracks()[0], stream);
-      const description = await localVideoDescription(peer, await peer.createOffer());
-      if (description && peers.get(viewer) === peer) channel.postMessage({ type: "offer", viewer, description });
+      while (active === capture) {
+        const { value: frame, done } = await capture.reader.read();
+        if (done) break;
+        try {
+          if (active !== capture) break;
+          const width = frame.displayWidth;
+          const height = frame.displayHeight;
+          const scale = Math.min(1, 1920 / width, 1080 / height);
+          const outputWidth = Math.max(1, Math.round(width * scale));
+          const outputHeight = Math.max(1, Math.round(height * scale));
+          if (canvas.width !== outputWidth) canvas.width = outputWidth;
+          if (canvas.height !== outputHeight) canvas.height = outputHeight;
+          context.drawImage(frame, 0, 0, outputWidth, outputHeight);
+        } finally {
+          frame.close();
+        }
+        const image = await canvas.convertToBlob({ type: "image/webp", quality: 0.86 });
+        if (active !== capture) break;
+        if (!capture.image) {
+          clearTimeout(capture.waiting);
+          status.textContent = "Изображение вкладки передаётся в этом профиле браузера.";
+        }
+        capture.image = image;
+        channel.postMessage({ type: "frame", image });
+      }
     } catch {
-      if (peers.get(viewer) === peer) removePeer(viewer);
+      stopMessage = "Не удалось передать изображение. Попробуйте снова выбрать вкладку.";
+    } finally {
+      if (active === capture) stop(stopMessage);
+      capture.reader.releaseLock();
     }
   }
 
-  if (channel) channel.onmessage = async ({ data }) => {
-    if (typeof data?.viewer !== "string") return;
-    if (data.type === "ready") await offerVideo(data.viewer);
-    if (data.type === "leave") removePeer(data.viewer);
-    if (data.type === "answer") {
-      const peer = peers.get(data.viewer);
-      if (peer?.signalingState !== "have-local-offer") return;
-      try {
-        await peer.setRemoteDescription(data.description);
-      } catch {
-        if (peers.get(data.viewer) === peer) removePeer(data.viewer);
-      }
-    }
+  if (channel) channel.onmessage = ({ data }) => {
+    if (data?.type !== "ready" || typeof data.viewer !== "string" || !active) return;
+    channel.postMessage(active.image
+      ? { type: "frame", image: active.image, viewer: data.viewer }
+      : { type: "start", viewer: data.viewer });
   };
 
   button.addEventListener("click", async () => {
-    if (stream) {
+    if (active) {
       stop("Показ вкладки завершён.");
       return;
     }
     const attempt = ++request;
     button.disabled = true;
     status.textContent = "Выберите вкладку с каталогом или картой.";
+    let stream;
     try {
-      const capture = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "browser" },
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "browser", frameRate: { max: 15 } },
         audio: false,
         selfBrowserSurface: "exclude",
         monitorTypeSurfaces: "exclude",
         surfaceSwitching: "exclude"
       });
-      const track = capture.getVideoTracks()[0];
+      const track = stream.getVideoTracks()[0];
       if (attempt !== request || track?.getSettings().displaySurface !== "browser" || track.readyState !== "live") {
-        capture.getTracks().forEach((item) => item.stop());
+        stream.getTracks().forEach((item) => item.stop());
         if (attempt === request) stop("Выберите вкладку браузера с каталогом.");
         return;
       }
-      stream = capture;
+      const reader = new MediaStreamTrackProcessor({ track, maxBufferSize: 1 }).readable.getReader();
+      const waiting = setTimeout(() => {
+        status.textContent = "Браузер пока не передаёт кадры. Перейдите в выбранную вкладку или запустите показ снова.";
+      }, catalogFrameWait);
+      const capture = { stream, reader, waiting };
+      active = capture;
       track.addEventListener("ended", () => {
-        if (stream === capture) stop("Показ вкладки завершён.");
+        if (active === capture) stop("Показ вкладки завершён.");
       }, { once: true });
       button.disabled = false;
       button.textContent = "Остановить показ вкладки";
-      status.textContent = "Показ включён для клиентских окон в этом профиле браузера.";
-      channel.postMessage({ type: "available" });
+      status.textContent = "Ждём первый кадр из выбранной вкладки.";
+      channel.postMessage({ type: "start" });
+      void publishFrames(capture);
     } catch {
+      stream?.getTracks().forEach((track) => track.stop());
       if (attempt === request) stop("Захват не запущен. Вы можете выбрать вкладку снова.");
     }
   }, { signal: events.signal });
@@ -122,9 +122,9 @@ function startCatalogPublisher(session) {
   window.addEventListener("pagehide", () => stop(), { signal: events.signal });
   stop();
   return {
-    show(active) {
-      if (!active && !section.hidden) stop();
-      section.hidden = !active;
+    show(visible) {
+      if (!visible && !section.hidden) stop();
+      section.hidden = !visible;
     },
     close() {
       stop();
@@ -135,56 +135,78 @@ function startCatalogPublisher(session) {
 }
 
 function startCatalogViewer(session) {
-  if (!window.RTCPeerConnection || !window.BroadcastChannel) return;
+  if (!window.BroadcastChannel || !window.createImageBitmap) return;
   const channel = catalogVideoChannel(session);
   const viewer = crypto.randomUUID();
   const overlay = document.getElementById("catalog-live");
-  const video = document.getElementById("catalog-video");
+  const canvas = document.getElementById("catalog-frame");
+  const context = canvas.getContext("2d", { alpha: false });
   const stage = document.getElementById("stage");
-  let peer;
+  const status = document.getElementById("catalog-view-status");
+  let waiting;
+  let generation = 0;
+  let pending;
+  let drawing = false;
 
   function reset() {
-    const previous = peer;
-    peer = undefined;
-    previous?.close();
-    video.srcObject = null;
+    clearTimeout(waiting);
+    status.hidden = true;
+    generation++;
+    pending = undefined;
     overlay.hidden = true;
     stage.inert = false;
+    canvas.width = 1;
+    canvas.height = 1;
   }
 
-  function requestVideo() {
+  function waitForFrames() {
+    reset();
+    status.textContent = "Подключаем показ вкладки…";
+    status.hidden = false;
+    waiting = setTimeout(() => {
+      status.textContent = "Изображение пока не поступает. Можно открыть каталог по ссылке на слайде.";
+    }, catalogFrameWait);
+  }
+
+  async function drawFrames(image) {
+    pending = image;
+    if (drawing) return;
+    drawing = true;
+    while (pending) {
+      const current = generation;
+      const source = pending;
+      pending = undefined;
+      let frame;
+      try {
+        frame = await createImageBitmap(source);
+        if (current !== generation) continue;
+        if (canvas.width !== frame.width) canvas.width = frame.width;
+        if (canvas.height !== frame.height) canvas.height = frame.height;
+        context.drawImage(frame, 0, 0);
+        clearTimeout(waiting);
+        status.hidden = true;
+        overlay.hidden = false;
+        stage.inert = true;
+      } catch {
+        // Keep the current scene available while waiting for a valid frame.
+      } finally {
+        frame?.close();
+      }
+    }
+    drawing = false;
+  }
+
+  function requestFrames() {
     channel.postMessage({ type: "ready", viewer });
   }
 
-  channel.onmessage = async ({ data }) => {
-    if (data?.type === "available") requestVideo();
-    if (data?.type === "stop") reset();
-    if (data?.type !== "offer" || data.viewer !== viewer) return;
-
-    reset();
-    const connection = new RTCPeerConnection();
-    peer = connection;
-    connection.ontrack = ({ streams }) => {
-      if (peer !== connection || !streams[0]) return;
-      video.srcObject = streams[0];
-      overlay.hidden = false;
-      stage.inert = true;
-    };
-    connection.onconnectionstatechange = () => {
-      if (peer === connection && connection.connectionState === "failed") reset();
-    };
-    try {
-      await connection.setRemoteDescription(data.description);
-      const description = await localVideoDescription(connection, await connection.createAnswer());
-      if (description && peer === connection) channel.postMessage({ type: "answer", viewer, description });
-    } catch {
-      if (peer === connection) reset();
-    }
+  channel.onmessage = ({ data }) => {
+    if (!data || (data.viewer && data.viewer !== viewer)) return;
+    if (data.type === "start") waitForFrames();
+    if (data.type === "stop") reset();
+    if (data.type === "frame" && data.image instanceof Blob) void drawFrames(data.image);
   };
-  window.addEventListener("pagehide", () => {
-    channel.postMessage({ type: "leave", viewer });
-    reset();
-  });
-  window.addEventListener("pageshow", requestVideo);
-  requestVideo();
+  window.addEventListener("pagehide", reset);
+  window.addEventListener("pageshow", requestFrames);
+  requestFrames();
 }
