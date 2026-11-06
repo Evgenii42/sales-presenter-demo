@@ -1,0 +1,7 @@
+title = "Показ квартиры"
+disableKinds = ["home", "section", "taxonomy", "term", "RSS", "sitemap", "robotsTXT", "404"]
+
+[[module.mounts]]
+source = "."
+target = "static"
+files = ["index.html", "client.html", "show.css", "show.js", "manager.js", "network.js", "network-config.js"]

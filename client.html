@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Клиент · Показ квартиры</title>
+  <link rel="stylesheet" href="show.css">
+  <script src="network-config.js" defer></script>
+  <script src="show.js" defer></script>
+</head>
+<body data-role="client">
+  <header class="bar">
+    <div class="app-identity">
+      <span class="app-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
+      <b>Самолёт</b>
+      <span class="mode">Показ квартиры</span>
+    </div>
+  </header>
+  <main class="layout client-panel">
+    <section id="stage" class="stage" aria-label="Общий кадр">
+      <p class="waiting" role="status">Подключаемся к показу…</p>
+    </section>
+  </main>
+</body>
+</html>

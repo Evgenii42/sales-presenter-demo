@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Менеджер · Показ квартиры</title>
+  <link rel="stylesheet" href="show.css">
+  <script src="network-config.js" defer></script>
+  <script src="show.js" defer></script>
+  <script src="manager.js" defer></script>
+</head>
+<body data-role="manager">
+  <header class="bar">
+    <div class="app-identity">
+      <span class="app-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
+      <b>Панель менеджера</b>
+      <span class="mode">Самолёт</span>
+    </div>
+    <div class="connection" id="show-actions" hidden>
+      <span id="status" role="status">Клиентский экран закрыт</span>
+      <a id="client-link" class="button secondary" target="_blank" rel="noopener">Открыть клиентский экран ↗</a>
+      <button id="sign-out" type="button" hidden>Завершить показ и выйти</button>
+    </div>
+  </header>
+  <main id="login" class="login" hidden>
+    <div class="login-panel">
+      <span class="login-label">Доступ для команды</span>
+      <h1>Вход в аккаунт</h1>
+      <p class="login-intro">Войдите под рабочей учётной записью, чтобы начать показ.</p>
+      <form id="login-form" method="post">
+        <fieldset id="login-fields" disabled>
+          <label for="email">Рабочая почта</label>
+          <input id="email" type="email" autocomplete="username" required>
+          <label for="password">Пароль</label>
+          <input id="password" type="password" autocomplete="current-password" required>
+          <button id="sign-in" type="submit" class="primary" disabled>Войти</button>
+        </fieldset>
+      </form>
+      <p id="login-status" class="footnote" role="status">Подключаем вход…</p>
+      <a id="open-demo" class="button secondary" href="?demo=1" hidden>Открыть демо ↗</a>
+    </div>
+    <aside class="login-preview">
+      <h2>Один показ, два экрана</h2>
+      <p>Клиент видит ход истории. Подсказки, ответы и управление остаются у менеджера.</p>
+      <div class="preview-windows" aria-hidden="true">
+        <div class="preview-screen preview-manager">
+          <span>Менеджер</span>
+          <i></i><i></i><i></i>
+        </div>
+        <div class="preview-screen preview-client">
+          <span>Клиент</span>
+          <i></i><i></i>
+        </div>
+      </div>
+    </aside>
+  </main>
+  <div id="workspace" class="layout" hidden>
+    <aside class="rail" aria-label="Этапы показа">
+      <ol class="steps">
+        <li data-step="U01" title="Знакомство">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v11h-6l-4 3v-3H5zM8 9h8M8 12h5"/></svg><span class="sr-only">Знакомство</span>
+        </li>
+        <li data-step="U08" title="Путь домой">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7v8H4zM10 19v-6h4v6"/></svg><span class="sr-only">Путь домой</span>
+        </li>
+        <li data-step="H02" title="Маршрут с коляской">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h9l3 4H9L7 4H4m5 6 1 5h7l3-5"/><circle cx="11" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg><span class="sr-only">Маршрут с коляской</span>
+        </li>
+        <li data-step="U19" title="Критерии">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h1m-1 6h1m-1 6h1"/></svg><span class="sr-only">Критерии</span>
+        </li>
+        <li data-step="U20" title="Подбор">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5v5H5zm9 0h5v5h-5zM5 14h5v5H5zm9 0h5v5h-5z"/></svg><span class="sr-only">Подбор</span>
+        </li>
+      </ol>
+    </aside>
+    <main class="panel">
+      <section id="stage" class="stage" aria-label="Общий кадр"></section>
+      <aside class="tools" aria-label="Рабочая панель">
+        <div class="tools-fields">
+          <div class="cue-card">
+            <p class="eyebrow">Подсказка менеджеру</p>
+            <h2 id="cue-title"></h2>
+            <p id="cue" class="cue"></p>
+          </div>
+          <button id="branch" type="button" class="branch-option" hidden>Маршрут с коляской ↗</button>
+          <div class="answer">
+            <label for="confirmed">Ответ клиента</label>
+            <textarea id="confirmed" rows="4" placeholder="Запишите ответ словами клиента"></textarea>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="next" type="button" class="primary">Далее</button>
+          <button id="back" type="button" class="secondary">Назад</button>
+        </div>
+        <p class="footnote">Ответ виден только менеджеру. Для репетиции используйте вымышленные данные.</p>
+      </aside>
+    </main>
+  </div>
+</body>
+</html>
