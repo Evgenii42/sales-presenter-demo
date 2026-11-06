@@ -3,14 +3,17 @@ function startManager(session, send) {
     U01: "Скажите, что уже знаете из заявки, и спросите, актуально ли это. Уточните, что клиент хочет решить к концу встречи.",
     U08: "Уточните, как человек обычно возвращается домой. Если он назвал коляску и хочет посмотреть маршрут, откройте ветку.",
     H02: "Попросите назвать самый неудобный участок привычного пути. Покажите, какие места проверите в конкретной секции.",
-    U19: "Повторите обязательные условия словами клиента и попросите подтвердить их перед подбором.",
-    U20: "Покажите, какой критерий закрывает каждый вариант и что ещё нужно проверить."
+    U19: "Подтвердите комнатность и верхнюю границу цены. Условия вроде проезда с коляской проверим отдельно в карточке и на плане секции.",
+    U20: "Откройте каталог или карту. Выберите квартиру и покажите, где в её карточке проверить планировку, генплан и условия бронирования."
   };
   const nextScene = { U01: "U08", U08: "U19", H02: "U19", U19: "U20" };
   const route = ["U01"];
   const steps = document.querySelectorAll("[data-step]");
   const events = new AbortController();
   const options = { signal: events.signal };
+  const roomCount = byId("room-count");
+  const priceLimit = byId("price-limit");
+  let catalog;
   let mouse = null;
   let frame = null;
 
@@ -30,7 +33,8 @@ function startManager(session, send) {
     send({
       scene: currentScene,
       position: currentPosition(),
-      point: publicPoint()
+      point: publicPoint(),
+      ...(currentScene === "U20" && catalog ? { catalog } : {})
     });
   }
 
@@ -46,6 +50,7 @@ function startManager(session, send) {
     const id = route.at(-1);
     mouse = null;
     renderScene(id);
+    if (id === "U20") updateCatalogLinks(catalog);
     for (const step of steps) {
       if (step.dataset.step === id) step.setAttribute("aria-current", "step");
       else step.removeAttribute("aria-current");
@@ -57,10 +62,21 @@ function startManager(session, send) {
     const nextLabel = { H02: "Вернуться к универсальной истории", U19: "Открыть подбор" };
     byId("next").textContent = nextLabel[id] || "Далее";
     byId("branch").hidden = id !== "U08";
+    byId("catalog-filters").hidden = id !== "U19";
     publish();
   }
 
-  byId("next").addEventListener("click", () => { route.push(nextScene[currentScene]); show(); }, options);
+  byId("next").addEventListener("click", () => {
+    if (currentScene === "U19") {
+      if (!priceLimit.reportValidity()) return;
+      catalog = roomCount.value || priceLimit.value ? {
+        ...(roomCount.value && { rooms: Number(roomCount.value) }),
+        ...(priceLimit.value && { priceMax: priceLimit.valueAsNumber })
+      } : undefined;
+    }
+    route.push(nextScene[currentScene]);
+    show();
+  }, options);
   byId("branch").addEventListener("click", () => { route.push("H02"); show(); }, options);
   byId("back").addEventListener("click", () => { route.pop(); show(); }, options);
   stage.addEventListener("scroll", schedulePublish, { ...options, passive: true });
@@ -82,6 +98,8 @@ function startManager(session, send) {
       byId("workspace").hidden = true;
       byId("show-actions").hidden = true;
       byId("confirmed").value = "";
+      roomCount.value = "";
+      priceLimit.value = "";
       currentScene = undefined;
       stage.replaceChildren();
     }

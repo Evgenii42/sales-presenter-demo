@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Менеджер · Показ квартиры</title>
-  <link rel="stylesheet" href="show.css">
+  <link rel="stylesheet" href="show.css?v=catalog-1">
   <script src="network-config.js" defer></script>
-  <script src="show.js" defer></script>
-  <script src="manager.js" defer></script>
+  <script src="show.js?v=catalog-1" defer></script>
+  <script src="manager.js?v=catalog-1" defer></script>
 </head>
 <body data-role="manager">
   <header class="bar">
@@ -84,6 +84,19 @@
             <p id="cue" class="cue"></p>
           </div>
           <button id="branch" type="button" class="branch-option" hidden>Маршрут с коляской ↗</button>
+          <fieldset id="catalog-filters" class="catalog-filters" hidden>
+            <legend>Согласованные параметры</legend>
+            <label for="room-count">Количество комнат</label>
+            <select id="room-count">
+              <option value="">Любое</option>
+              <option value="1">1 комната</option>
+              <option value="2">2 комнаты</option>
+              <option value="3">3 комнаты</option>
+            </select>
+            <label for="price-limit">Максимальная цена, ₽</label>
+            <input id="price-limit" type="number" min="1" max="1000000000" step="1" placeholder="Не указана">
+            <p class="footnote">Эти параметры попадут в ссылку на каталог после перехода к подбору.</p>
+          </fieldset>
           <div class="answer">
             <label for="confirmed">Ответ клиента</label>
             <textarea id="confirmed" rows="4" placeholder="Запишите ответ словами клиента"></textarea>

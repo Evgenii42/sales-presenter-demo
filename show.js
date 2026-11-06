@@ -2,6 +2,16 @@ const manager = document.body.dataset.role === "manager";
 const stage = document.querySelector("#stage");
 const byId = (id) => document.getElementById(id);
 
+function catalogUrl(filters, view) {
+  const url = new URL("https://samolet.ru/flats/");
+  url.search = "nameType=sale&free=1&type=100000000";
+  if ([1, 2, 3].includes(filters?.rooms)) url.searchParams.set("rooms", filters.rooms);
+  const price = filters?.priceMax;
+  if (Number.isSafeInteger(price) && price > 0 && price <= 1000000000) url.searchParams.set("price_max", price);
+  if (view === "map") url.searchParams.set("view_mode", "map");
+  return url.href;
+}
+
 const routeArt = `
   <figure class="art story-block" data-anchor="visual">
     <svg viewBox="0 0 760 520" role="img" aria-label="Условная схема пути от двора через вход и лифт к квартире">
@@ -52,7 +62,8 @@ const scenes = {
     intro: "Сравним, как вы дойдёте от двора до квартиры в обычный день.",
     visual: routeArt,
     detail: "Что проверим на этом маршруте",
-    result: "Где придётся открывать двери, обходить ступени или делать крюк с покупками."
+    result: "Где придётся открывать двери, обходить ступени или делать крюк с покупками.",
+    material: `<a class="source-link" href="${catalogUrl(undefined, "map")}" target="_blank" rel="noopener noreferrer">Посмотреть квартиры на карте ↗</a>`
   },
   H02: {
     name: "Маршрут с коляской",
@@ -67,18 +78,29 @@ const scenes = {
     title: "Соберём условия для подбора",
     intro: "Отделим обязательные условия от тех, по которым можно сравнить варианты.",
     detail: "Что возьмём в сравнение",
-    result: "Например, маршрут от входа до двери, планировку и комфортный платёж."
+    result: "По комнатности и верхней границе цены сузим выдачу. Маршрут до двери проверим отдельно для выбранных квартир."
   },
   U20: {
     name: "Подбор",
     title: "Теперь посмотрим квартиры",
-    intro: "В рабочем показе здесь откроются доступные варианты по согласованным критериям.",
-    visual: `<div class="lots story-block" data-anchor="visual">
-      <article><strong>Пример А</strong>Проверить путь от двора до двери</article>
-      <article><strong>Пример Б</strong>Сравнить место для хранения в прихожей</article>
-    </div>`,
-    detail: "Учебная выдача",
-    result: "Карточки иллюстрируют переход к подбору. Доступность и параметры лотов в демо условные."
+    intro: "Откройте актуальную выдачу «Самолёта» списком или на карте. Согласованные параметры перенесутся в каталог.",
+    visual: `<section class="selection story-block" data-anchor="visual" aria-label="Подбор на сайте Самолёта">
+      <p class="eyebrow">Москва и Московская область</p>
+      <div class="selection-grid">
+        <a data-catalog="list" href="${catalogUrl()}" target="_blank" rel="noopener noreferrer">
+          <strong>Каталог квартир ↗</strong><span>Сравнить планировки, цены и сроки</span>
+        </a>
+        <a data-catalog="map" href="${catalogUrl(undefined, "map")}" target="_blank" rel="noopener noreferrer">
+          <strong>На карте ↗</strong><span>Посмотреть расположение квартир и проектов</span>
+        </a>
+        <a href="https://max.ru/samolet_navigator_bot?start=pvztm50i" target="_blank" rel="noopener noreferrer">
+          <strong>Подбор с помощью ↗</strong><span>Открыть «Самолёт Навигатор» в MAX</span>
+        </a>
+      </div>
+    </section>`,
+    detail: "От подбора к бронированию",
+    result: "Выберите квартиру в каталоге. В карточке можно посмотреть планировку, план этажа, генплан и перейти к бронированию, если оно доступно.",
+    material: '<a class="source-link" href="https://samolet.ru/lp/how-to-buy/" target="_blank" rel="noopener noreferrer">Как купить онлайн ↗</a>'
   }
 };
 
@@ -97,6 +119,7 @@ function renderScene(id) {
     ${scene.visual || ""}
     <section class="detail story-block" data-anchor="detail">
       <h2>${scene.detail}</h2><p>${scene.result}</p>
+      ${scene.material || ""}
     </section>
   </article><div class="pointer" aria-hidden="true"></div>`;
   pointer = stage.querySelector(".pointer");
@@ -105,6 +128,12 @@ function renderScene(id) {
 
 function anchor(name) {
   return [...stage.querySelectorAll("[data-anchor]")].find((item) => item.dataset.anchor === name);
+}
+
+function updateCatalogLinks(filters) {
+  for (const link of stage.querySelectorAll("[data-catalog]")) {
+    link.href = catalogUrl(filters, link.dataset.catalog);
+  }
 }
 
 function stageTop() {
@@ -122,6 +151,7 @@ function currentPosition() {
 function applyPublicState(state) {
   if (!state || !Object.hasOwn(scenes, state.scene)) return;
   renderScene(state.scene);
+  if (state.scene === "U20") updateCatalogLinks(state.catalog);
   const section = anchor(state.position?.block);
   if (section && Number.isFinite(state.position.offset)) {
     const rect = section.getBoundingClientRect();
