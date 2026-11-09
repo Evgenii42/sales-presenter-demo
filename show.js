@@ -53,8 +53,11 @@ function renderSelection() {
 
 function renderCompanyEvidence() {
   return `<section class="company-evidence story-block" data-anchor="visual" aria-label="Что Самолёт покажет на встрече">
-    ${companyEvidence.map(({ eyebrow, title, description, image, alt, url, link }) => `<article>
-      <img class="company-evidence-image" src="media/${escaped(image)}" alt="${escaped(alt)}" width="1600" height="900">
+    ${companyEvidence.map(({ eyebrow, title, caption, description, image, alt, url, link }) => `<article>
+      <figure class="company-evidence-visual">
+        <img class="company-evidence-image" src="media/${escaped(image)}" alt="${escaped(alt)}" width="1600" height="900">
+        <figcaption>${escaped(caption)}</figcaption>
+      </figure>
       <div class="company-evidence-copy">
         <p class="scene-label">${escaped(eyebrow)}</p>
         <h2>${escaped(title)}</h2>
@@ -73,7 +76,7 @@ function frameFor(scene) {
   const [branch, part] = scene.id.split(".");
   const step = Number(part) - 1;
   const lifeProfile = { "I01.1": "resale", "I02.1": "rent" }[scene.id];
-  if (lifeProfile) return { ...livingFrame("U10", lifeProfile, false), title: branchAudience[branch][step] };
+  if (lifeProfile) return { ...livingFrame("U10", lifeProfile), title: branchAudience[branch][step] };
   const artwork = branchArtwork[branch][step];
   const focus = [0, 1, 1, 2][step];
   const captions = ["", "", ""];
@@ -89,32 +92,26 @@ function artworkUrl(artwork) {
 function renderArtwork(frame, option) {
   const artwork = option?.artwork || frame.artwork;
   const art = audienceArt[artwork];
-  const artLabel = artwork === frame.artwork && frame.artLabel ? frame.artLabel : art.label;
   const captions = [...(option?.labels || frame.captions)];
   const points = option ? option.points : frame.points;
   const focus = option ? option.step - 1 : frame.focus;
   if (option?.label) captions[focus] = option.label;
-  const takeaways = [];
   const labels = captions.map((caption, i) => {
     if (!caption) return "";
+    const active = i === focus ? " is-accent" : "";
     const point = points?.[i];
-    if (!point) {
-      takeaways.push(`<li${i === focus ? ' class="is-accent"' : ""}>${escaped(caption)}</li>`);
-      return "";
-    }
+    if (!point) return `<li class="frame-note frame-note-free${active}"><span>${escaped(caption)}</span></li>`;
     const [x, y, labelX = x] = point;
     const shift = labelX - x;
     const leader = shift ? `<svg class="slanted-leader" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       <path d="${shift > 0 ? "M0 100L100 0" : "M100 100L0 0"}"/></svg>` : "";
-    return `<li class="frame-note${i === focus ? " is-accent" : ""}${shift ? " has-shift" : ""}" style="--x:${x}%;--y:${y}%;--label-shift:${shift}cqw">
+    return `<li class="frame-note frame-note-pinned${active}${shift ? " has-shift" : ""}" style="--x:${x}%;--y:${y}%;--label-shift:${shift}cqw">
       ${leader}
       <span>${escaped(caption)}</span>
     </li>`;
   });
-  const visual = `<img src="${artworkUrl(artwork)}" alt="${escaped(art.alt || "")}" width="960" height="540">
-    <ul class="frame-notes">${labels.join("")}</ul>
-    <figcaption>${escaped(artLabel)}</figcaption>`;
-  return { visual, takeaways: takeaways.join("") };
+  return `<img src="${artworkUrl(artwork)}" alt="${escaped(art.alt || "")}" width="960" height="540">
+    <ul class="frame-notes" aria-label="Подписи к изображению">${labels.join("")}</ul>`;
 }
 
 function renderScene(id, project = demoProject, living = "", approximate = false) {
@@ -124,7 +121,7 @@ function renderScene(id, project = demoProject, living = "", approximate = false
   if (currentScene === id && currentProject === project && currentLiving === profile && currentLivingApproximate === livingApproximate) return;
   const alternative = projectScenes[id];
   const scene = alternative || publicStory.scenes[id];
-  const frame = profile ? livingFrame(id, profile, livingApproximate) : alternative || frameFor(scene);
+  const frame = profile ? livingFrame(id, profile) : alternative || frameFor(scene);
   const artwork = id === "P02" ? null : renderArtwork(frame);
   const place = hubProjects[project];
   const phase = phaseFor(id);
@@ -135,7 +132,6 @@ function renderScene(id, project = demoProject, living = "", approximate = false
   currentAccent = 0;
   const material = profile && frame.source ? externalLink(frame.source, "Источник плана")
     : alternative ? externalLink(place.page, id === "X05" ? "Открыть предложения проекта" : "Страница проекта") : {
-    P02: '<small class="company-image-note">Иллюстрации сценариев</small>',
     U01: externalLink(publicStory.projectPage, "Страница проекта"),
     U05: externalLink(publicStory.projectPage + "#block-genplan", "Генплан на сайте проекта"),
     U07: externalLink(publicStory.projectPage, "Посмотреть инфраструктуру проекта"),
@@ -147,16 +143,15 @@ function renderScene(id, project = demoProject, living = "", approximate = false
     clientMode.textContent = phase < 0 ? "" : place.name;
     document.title = phase < 0 ? "Самолёт" : `Самолёт · ${place.name}`;
   }
-  stage.innerHTML = `<article class="story eco-story${id === "P01" ? " company-cover" : ""}${artwork?.takeaways ? " has-takeaways" : ""}" data-scene="${id}" data-project="${project}"${profile ? ` data-living="${profile}"` : ""}>
+  stage.innerHTML = `<article class="story eco-story${id === "P01" ? " company-cover" : ""}" data-scene="${id}" data-project="${project}"${profile ? ` data-living="${profile}"` : ""}>
     <header class="story-block scene-heading" data-anchor="intro">
       <h1>${escaped(id === "X01" ? `${place.name}. ${frame.title}` : frame.title)}</h1>
       ${id === "P01" ? `<p class="company-intro">${escaped(scene.context)}</p>` : ""}
     </header>
-    ${artwork ? `<figure class="scene-frame story-block${profile && id === "U09" ? " exact-layout" : ""}${livingApproximate ? " comparable-life" : ""}" data-anchor="visual" aria-live="polite">${artwork.visual}</figure>` : renderCompanyEvidence()}
+    ${artwork ? `<figure class="scene-frame story-block${profile && id === "U09" ? " exact-layout" : ""}" data-anchor="visual" aria-live="polite">${artwork}</figure>` : renderCompanyEvidence()}
     ${id === "U20" ? renderSelection() : ""}
     ${id === "P01" ? "" : `<section class="detail story-block" data-anchor="detail">
-      <ul id="frame-takeaways" class="frame-takeaways" aria-label="Что учтём"${artwork?.takeaways ? "" : " hidden"}>${artwork?.takeaways || ""}</ul>
-      ${scene.gate ? "" : `<p data-scene-context>${escaped(frame.context || scene.context)}</p>`}
+      ${scene.gate ? "" : `<p data-scene-context>${livingApproximate ? "<strong>Пример на другой квартире той же комнатности.</strong> " : ""}${escaped(frame.context || scene.context)}</p>`}
       ${material}
       ${id === "U01" ? '<span id="scene-evidence"></span>' : ""}
     </section>`}
@@ -176,12 +171,7 @@ function applyVisualAccent(index) {
   currentAccent = accent;
   const frame = alternative || frameFor(scene);
   anchor("intro").querySelector("h1").textContent = option?.title || frame.title;
-  const artwork = renderArtwork(frame, option);
-  anchor("visual").innerHTML = artwork.visual;
-  const takeaways = byId("frame-takeaways");
-  takeaways.innerHTML = artwork.takeaways;
-  takeaways.hidden = !artwork.takeaways;
-  stage.querySelector(".eco-story").classList.toggle("has-takeaways", Boolean(artwork.takeaways));
+  anchor("visual").innerHTML = renderArtwork(frame, option);
   stage.querySelector("[data-scene-context]").textContent = option?.context || scene.context;
   if (currentScene === "U01") {
     byId("scene-evidence").innerHTML = option?.topic === "school" ? externalLink("https://t.me/s/school338official/24648?q=%23%D0%92%D0%A1%D0%95%D0%9B%D0%95%D0%9D%D0%9D%D0%90%D0%AF338", "Площадка «Альфа» · школа №338") : "";

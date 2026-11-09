@@ -191,7 +191,7 @@ function profileForPurpose(purpose, children, future) {
   return Object.hasOwn(livingProfiles, purpose) ? purpose : "";
 }
 
-function livingFrame(id, key, approximate) {
+function livingFrame(id, key) {
   const profile = livingProfiles[key];
   const lot = livingLayouts[profile.layout];
   if (id === "U09") {
@@ -204,7 +204,6 @@ function livingFrame(id, key, approximate) {
   return {
     title: profile.lifeTitle, artwork: `life-${key}`, captions: profile.lifeLabels,
     points: livingArtworkPoints[key],
-    artLabel: approximate ? "Пример на другой квартире той же комнатности" : undefined,
     context: profile.life
   };
 }
