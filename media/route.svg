@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+  <defs><pattern id="park" width="44" height="44" patternUnits="userSpaceOnUse"><circle cx="11" cy="12" r="6" fill="#9dbca5" opacity=".5"/><circle cx="33" cy="34" r="4" fill="#9dbca5" opacity=".42"/></pattern></defs>
+  <path fill="#dce9df" d="M0 0h960v540H0z"/><path fill="url(#park)" d="M0 0h960v540H0z"/>
+  <g fill="#bfced0" stroke="#f6faf6" stroke-width="7">
+    <path d="M66 70h240v128H66zM374 63h179v84H374zM694 84h198v100H694zM67 370h240v112H67zM379 386h171v85H379zM648 381h233v99H648z"/>
+    <path d="M78 246h108v95H78zM421 230h127v95H421zM774 244h123v90H774z" fill="#acbec3"/>
+  </g>
+  <path d="M-10 221h986M-10 355h986M331-12v565M612-12v565" stroke="#f9fbf8" stroke-width="24" fill="none"/>
+  <path d="M172 356h158v-79h287v74h170" fill="none" stroke="#fff" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M172 356h158v-79h287v74h170" fill="none" stroke="#087dea" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 14"/>
+  <g fill="#087dea" stroke="white" stroke-width="5"><circle cx="172" cy="356" r="13"/><circle cx="480" cy="277" r="13"/><circle cx="787" cy="351" r="13"/></g>
+</svg>

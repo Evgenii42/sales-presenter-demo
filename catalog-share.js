@@ -8,15 +8,16 @@ function startCatalogPublisher(session) {
   const section = document.getElementById("catalog-share");
   const button = document.getElementById("share-catalog");
   const status = document.getElementById("catalog-share-status");
-  const instructions = "Откройте каталог или карту, затем выберите эту вкладку Chrome или Edge.";
   const available = Boolean(navigator.mediaDevices?.getDisplayMedia && window.MediaStreamTrackProcessor
     && window.OffscreenCanvas && window.BroadcastChannel);
   const channel = available ? catalogVideoChannel(session) : null;
   const events = new AbortController();
   let active;
+  let kind;
+  let sceneKey;
   let request = 0;
 
-  function stop(message = instructions) {
+  function stop(message) {
     request++;
     const previous = active;
     active = undefined;
@@ -27,8 +28,10 @@ function startCatalogPublisher(session) {
       channel.postMessage({ type: "stop" });
     }
     button.disabled = !available;
-    button.textContent = "Показать вкладку";
-    status.textContent = available ? message : "Для показа вкладки откройте панель в Chrome или Edge.";
+    button.textContent = kind === "map" ? "Показать карту клиенту" : "Показать вкладку";
+    const instructions = kind === "map" ? "Откройте Яндекс Карты и выберите их вкладку."
+      : "Откройте каталог или карту квартир, затем выберите эту вкладку Chrome или Edge.";
+    status.textContent = available ? message || instructions : "Для показа вкладки откройте панель в Chrome или Edge.";
   }
 
   async function publishFrames(capture) {
@@ -59,7 +62,7 @@ function startCatalogPublisher(session) {
           status.textContent = "Изображение вкладки передаётся в этом профиле браузера.";
         }
         capture.image = image;
-        channel.postMessage({ type: "frame", image });
+        channel.postMessage({ type: "frame", image, kind: capture.kind });
       }
     } catch {
       stopMessage = "Не удалось передать изображение. Попробуйте снова выбрать вкладку.";
@@ -72,8 +75,8 @@ function startCatalogPublisher(session) {
   if (channel) channel.onmessage = ({ data }) => {
     if (data?.type !== "ready" || typeof data.viewer !== "string" || !active) return;
     channel.postMessage(active.image
-      ? { type: "frame", image: active.image, viewer: data.viewer }
-      : { type: "start", viewer: data.viewer });
+      ? { type: "frame", image: active.image, kind: active.kind, viewer: data.viewer }
+      : { type: "start", kind: active.kind, viewer: data.viewer });
   };
 
   button.addEventListener("click", async () => {
@@ -83,7 +86,7 @@ function startCatalogPublisher(session) {
     }
     const attempt = ++request;
     button.disabled = true;
-    status.textContent = "Выберите вкладку с каталогом или картой.";
+    status.textContent = kind === "map" ? "Выберите вкладку с Яндекс Картами." : "Выберите вкладку с каталогом или картой квартир.";
     let stream;
     try {
       stream = await navigator.mediaDevices.getDisplayMedia({
@@ -96,14 +99,14 @@ function startCatalogPublisher(session) {
       const track = stream.getVideoTracks()[0];
       if (attempt !== request || track?.getSettings().displaySurface !== "browser" || track.readyState !== "live") {
         stream.getTracks().forEach((item) => item.stop());
-        if (attempt === request) stop("Выберите вкладку браузера с каталогом.");
+        if (attempt === request) stop("Выберите вкладку браузера.");
         return;
       }
       const reader = new MediaStreamTrackProcessor({ track, maxBufferSize: 1 }).readable.getReader();
       const waiting = setTimeout(() => {
         status.textContent = "Браузер пока не передаёт кадры. Перейдите в выбранную вкладку или запустите показ снова.";
       }, catalogFrameWait);
-      const capture = { stream, reader, waiting };
+      const capture = { stream, reader, waiting, kind };
       active = capture;
       track.addEventListener("ended", () => {
         if (active === capture) stop("Показ вкладки завершён.");
@@ -111,7 +114,7 @@ function startCatalogPublisher(session) {
       button.disabled = false;
       button.textContent = "Остановить показ вкладки";
       status.textContent = "Ждём первый кадр из выбранной вкладки.";
-      channel.postMessage({ type: "start" });
+      channel.postMessage({ type: "start", kind });
       void publishFrames(capture);
     } catch {
       stream?.getTracks().forEach((track) => track.stop());
@@ -122,9 +125,13 @@ function startCatalogPublisher(session) {
   window.addEventListener("pagehide", () => stop(), { signal: events.signal });
   stop();
   return {
-    show(visible) {
-      if (!visible && !section.hidden) stop();
-      section.hidden = !visible;
+    show(nextKind, nextScene) {
+      if (nextKind !== kind || nextScene !== sceneKey) {
+        kind = nextKind;
+        sceneKey = nextScene;
+        stop();
+      }
+      section.hidden = !kind;
     },
     close() {
       stop();
@@ -139,6 +146,7 @@ function startCatalogViewer(session) {
   const channel = catalogVideoChannel(session);
   const viewer = crypto.randomUUID();
   const overlay = document.getElementById("catalog-live");
+  const title = overlay.querySelector("h1");
   const canvas = document.getElementById("catalog-frame");
   const context = canvas.getContext("2d", { alpha: false });
   const stage = document.getElementById("stage");
@@ -164,7 +172,7 @@ function startCatalogViewer(session) {
     status.textContent = "Подключаем показ вкладки…";
     status.hidden = false;
     waiting = setTimeout(() => {
-      status.textContent = "Изображение пока не поступает. Можно открыть каталог по ссылке на слайде.";
+      status.textContent = "Изображение вкладки пока не поступает.";
     }, catalogFrameWait);
   }
 
@@ -204,7 +212,10 @@ function startCatalogViewer(session) {
     if (!data || (data.viewer && data.viewer !== viewer)) return;
     if (data.type === "start") waitForFrames();
     if (data.type === "stop") reset();
-    if (data.type === "frame" && data.image instanceof Blob) void drawFrames(data.image);
+    if (data.type === "frame" && data.image instanceof Blob) {
+      title.textContent = data.kind === "map" ? "Маршрут на карте" : "Подбор квартир · Прямой показ";
+      void drawFrames(data.image);
+    }
   };
   window.addEventListener("pagehide", reset);
   window.addEventListener("pageshow", requestFrames);

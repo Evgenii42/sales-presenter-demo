@@ -3,29 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Менеджер · Показ квартиры</title>
-  <link rel="stylesheet" href="show.css?v=catalog-3">
-  <script src="network-config.js" defer></script>
-  <script src="catalog-share.js?v=catalog-3" defer></script>
-  <script src="show.js?v=catalog-3" defer></script>
-  <script src="manager.js?v=catalog-3" defer></script>
+  <title>Самолёт · Панель менеджера</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="show.css?v=0.6.0">
+  <script src="startup.js?v=0.6.0" defer></script>
+  <script src="network-config.js?v=0.6.0" defer></script>
+  <script src="catalog-share.js?v=0.6.0" defer></script>
+  <script src="story-public.js?v=0.6.0" defer></script>
+  <script src="projects.js?v=0.6.0" defer></script>
+  <script src="audience-story.js?v=0.6.0" defer></script>
+  <script src="eco-layouts.js?v=0.6.0" defer></script>
+  <script src="living-scenes.js?v=0.6.0" defer></script>
+  <script src="visual-context.js?v=0.6.0" defer></script>
+  <script src="story-manager.js?v=0.6.0" defer></script>
+  <script src="show.js?v=0.6.0" defer></script>
+  <script src="route-planner.js?v=0.6.0" defer></script>
+  <script src="meeting-selection.js?v=0.6.0" defer></script>
+  <script src="manager.js?v=0.6.0" defer></script>
 </head>
 <body data-role="manager">
+  <section id="startup-notice" class="startup-notice" aria-label="Загрузка показа">
+    <p role="status">Загружаем показ…</p>
+    <a href="">Открыть свежую страницу</a>
+  </section>
   <header class="bar">
     <div class="app-identity">
       <span class="app-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
       <b>Панель менеджера</b>
-      <span class="mode">Самолёт</span>
+      <span id="manager-mode" class="mode">Самолёт · Общая презентация</span>
     </div>
     <div class="connection" id="show-actions" hidden>
       <span id="status" role="status">Клиентский экран закрыт</span>
+      <button id="open-hub" class="secondary" type="button" hidden>Проекты ↔</button>
       <a id="client-link" class="button secondary" target="_blank" rel="noopener">Открыть клиентский экран ↗</a>
       <button id="sign-out" type="button" hidden>Завершить показ и выйти</button>
     </div>
   </header>
   <main id="login" class="login" hidden>
     <div class="login-panel">
-      <span class="login-label">Доступ для команды</span>
+      <span class="login-label">Самолёт · доступ для команды</span>
       <h1>Вход в аккаунт</h1>
       <p class="login-intro">Войдите под рабочей учётной записью, чтобы начать показ.</p>
       <form id="login-form" method="post">
@@ -56,64 +72,313 @@
     </aside>
   </main>
   <div id="workspace" class="layout" hidden>
-    <aside class="rail" aria-label="Этапы показа">
-      <ol class="steps">
-        <li data-step="U01" title="Знакомство">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v11h-6l-4 3v-3H5zM8 9h8M8 12h5"/></svg><span class="sr-only">Знакомство</span>
-        </li>
-        <li data-step="U08" title="Путь домой">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7v8H4zM10 19v-6h4v6"/></svg><span class="sr-only">Путь домой</span>
-        </li>
-        <li data-step="H02" title="Маршрут с коляской">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h9l3 4H9L7 4H4m5 6 1 5h7l3-5"/><circle cx="11" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg><span class="sr-only">Маршрут с коляской</span>
-        </li>
-        <li data-step="U19" title="Критерии">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h1m-1 6h1m-1 6h1"/></svg><span class="sr-only">Критерии</span>
-        </li>
-        <li data-step="U20" title="Подбор">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5v5H5zm9 0h5v5h-5zM5 14h5v5H5zm9 0h5v5h-5z"/></svg><span class="sr-only">Подбор</span>
-        </li>
-      </ol>
+    <aside class="rail" aria-label="Маршрут показа">
+      <div class="rail-title">История v0.6</div>
+      <p id="run-progress" class="rail-progress"></p>
+      <ol id="chapters" class="steps"></ol>
+      <details class="rehearsal" open>
+        <summary>Репетиция</summary>
+        <label for="practice">Вводные</label>
+        <select id="practice">
+          <option value="none">Свои ответы</option>
+          <option value="partial">Известна только цель</option>
+          <optgroup label="Восемь историй">
+            <option value="family">Семья и школа</option>
+            <option value="work">Без детей, работа дома</option>
+            <option value="upgrade">Квартира побольше</option>
+            <option value="parents">Для родителей</option>
+            <option value="child-home">Жильё ребёнку</option>
+            <option value="rent">Сдавать в аренду</option>
+            <option value="resale">Купить для перепродажи</option>
+            <option value="independent">Съехать от родных</option>
+          </optgroup>
+          <option value="move">Семья и переезд · демо</option>
+        </select>
+        <label for="route-mode">Маршрут</label>
+        <select id="route-mode">
+          <option value="full">Полный · 10:00</option>
+          <option value="short">Короткий · основные сцены</option>
+        </select>
+        <button id="restart-story" class="secondary" type="button">Начать заново</button>
+        <p id="practice-guide" class="footnote" hidden></p>
+      </details>
     </aside>
     <main class="panel">
       <section id="stage" class="stage" aria-label="Общий кадр"></section>
       <aside class="tools" aria-label="Рабочая панель">
         <div class="tools-fields">
           <div class="cue-card">
-            <p class="eyebrow">Подсказка менеджеру</p>
+            <p id="cue-meta" class="eyebrow">Только у менеджера</p>
             <h2 id="cue-title"></h2>
             <p id="cue" class="cue"></p>
+            <p id="cue-action" class="manager-action"></p>
+            <p id="cue-outcome" class="manager-outcome"></p>
+            <p id="cue-proof" class="footnote"></p>
+            <div id="cue-sources" class="cue-sources" hidden></div>
           </div>
-          <button id="branch" type="button" class="branch-option" hidden>Маршрут с коляской ↗</button>
+          <details id="meeting-summary" class="catalog-filters" hidden>
+            <summary>Запрос и проверки</summary>
+            <ul id="meeting-criteria" class="check-list"></ul>
+            <button id="edit-meeting" class="secondary" type="button">Уточнить запрос</button>
+          </details>
+          <fieldset id="intake-fields" class="catalog-filters intake-fields" hidden>
+            <legend id="intake-title">Уточнить запрос</legend>
+            <p id="intake-summary" class="intake-summary" hidden></p>
+            <div id="intake-purpose" class="intake-row">
+              <label for="lead-purpose">Для кого выбираете квартиру?</label>
+              <select id="lead-purpose">
+                <option value="">Пока неизвестно</option>
+                <option value="self">Для себя</option>
+                <option value="relative">Для родителей</option>
+                <option value="upgrade">Переехать в квартиру побольше</option>
+                <option value="child-home">Обеспечить ребёнка жильём</option>
+                <option value="rent">Сдавать в аренду</option>
+                <option value="resale">Купить для перепродажи</option>
+                <option value="independent">Съехать от родных</option>
+                <option value="investment">Инвестиции · цель уточняется</option>
+              </select>
+            </div>
+            <div id="intake-children" class="intake-row" hidden>
+              <label for="lead-children">Будут ли с вами жить дети?</label>
+              <select id="lead-children">
+                <option value="">Пока не уточнили</option>
+                <option value="yes">Да</option>
+                <option value="no">Нет</option>
+              </select>
+            </div>
+            <div id="intake-topic" class="intake-row">
+              <label for="lead-topic">Что сильнее всего повлияет на выбор?</label>
+              <select id="lead-topic"><option value="">Пока неизвестно или другое</option></select>
+            </div>
+            <details class="intake-limits">
+              <summary>Если уже известны бюджет и срок</summary>
+              <label for="lead-budget">Верхняя цена квартиры, ₽</label>
+              <input id="lead-budget" type="number" min="1" max="1000000000" step="1" placeholder="Не указана">
+              <label for="lead-when">Когда нужен переезд</label>
+              <select id="lead-when">
+                <option value="">Пока не обсуждали</option>
+                <option value="ready">Нужна готовая квартира</option>
+                <option value="year">В течение года</option>
+                <option value="flexible">Срок гибкий</option>
+              </select>
+              <label for="lead-date">Въезд не позже</label>
+              <input id="lead-date" type="date">
+              <label for="lead-rooms">Сколько комнат нужно</label>
+              <select id="lead-rooms">
+                <option value="">Пока неизвестно</option><option value="0">Студия</option><option value="1">1 комната</option><option value="2">2 комнаты</option><option value="3">3 комнаты</option>
+              </select>
+            </details>
+            <details class="meeting-details">
+              <summary>Если уже известны детали запроса</summary>
+              <label for="lead-detail">Обязательное условие своими словами</label>
+              <input id="lead-detail" maxlength="180" placeholder="Например, две отдельные спальни">
+              <label for="lead-route-limit">Предел времени до школы, сада или места назначения, мин</label>
+              <input id="lead-route-limit" type="number" min="1" max="240" step="1" placeholder="Например, 15">
+              <label for="lead-place">Куда обычно ездите после школы или напрямую</label>
+              <input id="lead-place" maxlength="160" placeholder="Например, метро «Тёплый Стан»">
+              <label for="lead-transport">Как добираетесь</label>
+              <select id="lead-transport">
+                <option value="">Пока неизвестно</option><option value="mt">На общественном транспорте</option><option value="auto">На машине</option><option value="pd">Пешком</option>
+              </select>
+            </details>
+            <button id="intake-edit" class="secondary" type="button" hidden>Уточнить вводные</button>
+            <label class="tailoring" for="tailor-intro"><input id="tailor-intro" type="checkbox" checked> Показать на первом кадре проекта пользу под запрос</label>
+            <div class="intake-preview">
+              <img id="intake-preview-image" alt="" width="64" height="40">
+              <p><b>Следующий кадр</b><span id="intake-preview-label" aria-live="polite"></span></p>
+            </div>
+            <p class="footnote">Выбор обновляет текущую иллюстрацию. Поля ответа видит менеджер.</p>
+          </fieldset>
+          <fieldset id="visual-controls" class="visual-controls" hidden>
+            <legend>Сегмент и потребность</legend>
+            <p id="visual-guide" class="footnote">Выберите, что важнее клиенту. История подстроится.</p>
+            <div id="visual-options" class="visual-options"></div>
+          </fieldset>
+          <fieldset id="living-profile-fields" class="catalog-filters" hidden>
+            <legend>Планировка и жизнь дома</legend>
+            <label for="living-profile">Какой сценарий показать?</label>
+            <select id="living-profile"></select>
+            <p id="living-fit" class="footnote"></p>
+          </fieldset>
+          <details id="layout-library" class="catalog-filters layout-library" hidden>
+            <summary>Все планировки проекта</summary>
+            <label for="layout-library-plan">План из каталога</label>
+            <select id="layout-library-plan"></select>
+            <img id="layout-library-image" alt="">
+            <a id="layout-library-source" class="source-link" target="_blank" rel="noopener noreferrer">Открыть карточку ↗</a>
+            <small id="layout-library-life-note" aria-live="polite"></small>
+            <button id="layout-library-life" type="button" class="secondary" aria-describedby="layout-library-life-note">Показать сценарий жизни</button>
+          </details>
+          <form id="route-planner" hidden>
+            <fieldset class="catalog-filters route-planner">
+              <legend>Маршрут на карте</legend>
+              <label for="route-origin">Откуда</label>
+              <input id="route-origin" required maxlength="180" autocomplete="off" placeholder="Адрес корпуса или подъезда">
+              <p id="route-origin-note" class="footnote"></p>
+              <label for="route-destination">Куда</label>
+              <select id="route-destination" required></select>
+              <div id="route-custom-row" hidden>
+                <label for="route-custom">Адрес назначения</label>
+                <input id="route-custom" maxlength="180" autocomplete="off" placeholder="Например, Москва, ул. Тверская, 13">
+              </div>
+              <label for="route-travel">Способ поездки</label>
+              <select id="route-travel">
+                <option value="mt">Общественный транспорт</option>
+                <option value="auto">На машине</option>
+                <option value="pd">Пешком</option>
+              </select>
+              <label for="route-via">Через промежуточную точку</label>
+              <input id="route-via" maxlength="180" placeholder="Например, вход в школу">
+              <p class="footnote">По ссылке точки маршрута открываются в Яндекс Картах.</p>
+              <p id="route-via-note" class="footnote" hidden>Карта считает дорогу. Добавьте время на остановку в школе или саду отдельно.</p>
+              <div class="route-actions">
+                <button id="route-open" class="primary" type="submit">Открыть в Яндекс Картах ↗</button>
+                <a id="route-search" class="source-link" target="_blank" rel="noopener noreferrer" hidden>Поиск точки ↗</a>
+              </div>
+              <p id="route-status" class="footnote" role="status"></p>
+              <a id="route-reopen" class="source-link" target="_blank" rel="noopener noreferrer" hidden>Открыть ссылку на маршрут ↗</a>
+              <details id="route-result" class="meeting-details">
+                <summary>Записать результат карты</summary>
+                <label class="tailoring"><input id="route-confirm-origin" type="checkbox"> Проверен адрес выбранного корпуса или подъезда</label>
+                <label for="route-minutes">Время по карте, мин</label>
+                <input id="route-minutes" type="number" min="1" max="600" step="1">
+                <label id="route-departure-label" for="route-departure">Отправление в Картах</label>
+                <input id="route-departure" maxlength="60" placeholder="Например, будни 07:45 по Москве">
+                <label for="route-note">Что проверить на месте</label>
+                <input id="route-note" maxlength="140" placeholder="Например, проход через шлагбаум">
+                <button id="route-save" class="secondary" type="button">Сохранить проверку</button>
+              </details>
+              <p id="route-saved" class="manager-outcome" role="status" hidden></p>
+            </fieldset>
+          </form>
+          <fieldset id="school-check" class="catalog-filters" hidden>
+            <legend id="school-check-title">Приём в школу</legend>
+            <label for="school-institution">Учреждение или площадка</label>
+            <input id="school-institution" maxlength="120" placeholder="Укажите, где проверяете приём">
+            <label for="school-intake">Класс или группа и нужный срок</label>
+            <input id="school-intake" maxlength="120" placeholder="Например, 3 класс к сентябрю">
+            <label for="school-admission">Что известно о приёме</label>
+            <select id="school-admission">
+              <option value="">Нужно уточнить</option><option value="yes">Есть подтверждение от учреждения</option>
+              <option value="no">Приём на нужный срок не подтверждён учреждением</option>
+            </select>
+            <p class="footnote">Результат маршрута и подтверждение приёма сохраняются отдельно.</p>
+          </fieldset>
+          <section id="catalog-share" class="catalog-share" aria-label="Демонстрация вкладки" hidden>
+            <button id="share-catalog" type="button" class="primary">Показать вкладку</button>
+            <p id="catalog-share-status" class="footnote" role="status"></p>
+          </section>
+          <fieldset id="household-fields" class="catalog-filters" hidden>
+            <legend>Сведения о жильцах</legend>
+            <label for="children">Будут ли постоянно жить дети</label>
+            <select id="children"><option value="">Пока неизвестно</option><option value="yes">Да</option><option value="no">Нет</option></select>
+            <label for="school">Что важно для утреннего маршрута</label>
+            <select id="school"><option value="">Пока неизвестно или не нужно</option><option value="school">Школа</option><option value="daycare">Детский сад</option></select>
+            <label for="work">Нужно место для работы дома</label>
+            <select id="work"><option value="">Пока неизвестно</option><option value="yes">Да</option><option value="no">Нет</option></select>
+            <p class="footnote">Вводные учитываются после сверки с клиентом.</p>
+          </fieldset>
+          <fieldset id="future-fields" class="catalog-filters" hidden>
+            <legend id="future-title">Дополнительная цель</legend>
+            <label id="future-label" for="future">Что будет важно при переезде</label>
+            <select id="future"><option value="">Пока не обсуждали</option><option value="none">Дополнительная проверка не нужна</option><option value="sale">Возможность продать</option><option value="rent">Возможность сдавать</option></select>
+            <p id="future-guide" class="footnote"></p>
+          </fieldset>
+          <button id="withdraw-future" class="secondary" type="button" hidden>Продолжить без дополнительной цели</button>
+          <button id="review-future" class="secondary" type="button" hidden>Вернуться к вопросу о переезде</button>
+          <fieldset id="priority-fields" class="catalog-filters" hidden>
+            <legend>Важное условие</legend>
+            <label for="priority">Что проверим у первой квартиры</label>
+            <input id="priority" type="text" maxlength="180" placeholder="Например, путь от входа без ступеней">
+          </fieldset>
+          <div id="branch-options" class="branch-options" hidden></div>
+          <section id="hub-suggestions" class="hub-suggestions" aria-label="Проекты для сравнения" hidden></section>
           <fieldset id="catalog-filters" class="catalog-filters" hidden>
             <legend>Согласованные параметры</legend>
             <label for="room-count">Количество комнат</label>
             <select id="room-count">
               <option value="">Любое</option>
+              <option value="0">Студия</option>
               <option value="1">1 комната</option>
               <option value="2">2 комнаты</option>
               <option value="3">3 комнаты</option>
             </select>
+            <div id="living-suggestion" class="living-suggestion" hidden>
+              <p id="living-suggestion-text" class="footnote"></p>
+              <button id="use-living-rooms" class="secondary" type="button">Взять в подбор</button>
+            </div>
             <label for="price-limit">Максимальная цена, ₽</label>
             <input id="price-limit" type="number" min="1" max="1000000000" step="1" placeholder="Не указана">
             <p class="footnote">Эти параметры попадут в ссылку на каталог после перехода к подбору.</p>
           </fieldset>
-          <section id="catalog-share" class="catalog-share" aria-label="Демонстрация каталога" hidden>
-            <button id="share-catalog" type="button" class="primary">Показать вкладку</button>
-            <p id="catalog-share-status" class="footnote" role="status"></p>
+          <fieldset id="selection-fields" class="catalog-filters" hidden>
+            <legend>Что показал каталог</legend>
+            <p id="selection-priority" class="manager-outcome" hidden></p>
+            <a id="selection-plan" class="source-link" target="_blank" rel="noopener noreferrer" hidden>Источник примера планировки ↗</a>
+            <label for="selection-result">Итог подбора</label>
+            <select id="selection-result">
+              <option value="">Ещё смотрим</option>
+              <option value="found">Есть варианты</option>
+              <option value="empty">Пустая выдача</option>
+              <option value="price">Цена выше бюджета</option>
+              <option value="timing">Срок не подходит</option>
+              <option value="error">Сайт не открылся</option>
+              <option value="visit">Готов к просмотру</option>
+              <option value="booking">Хочет проверить условия брони</option>
+            </select>
+            <p id="selection-guide" class="footnote"></p>
+            <div id="selection-fallback" hidden></div>
+          </fieldset>
+          <section id="meeting-selection" class="catalog-filters" aria-label="Кандидаты и следующий шаг" hidden>
+            <h2>Кандидаты и следующий шаг</h2>
+            <p id="shortlist-criteria" class="footnote"></p>
+            <p id="future-comparison" class="manager-outcome" aria-live="polite" hidden></p>
+            <button id="sample-candidates" class="secondary" type="button" hidden>Добавить два учебных варианта</button>
+            <div id="shortlist-cards"></div>
+            <form id="shortlist-add">
+              <label for="lot-url">Ссылка на карточку квартиры</label>
+              <input id="lot-url" type="url" maxlength="1024" placeholder="https://samolet.ru/project/…/flats/…" required>
+              <button class="secondary" type="submit">Добавить кандидата</button>
+            </form>
+            <p id="shortlist-status" class="footnote" role="status"></p>
+            <label for="follow-up">О чём договорились</label>
+            <select id="follow-up">
+              <option value="">Ещё не согласовали</option><option>Проверить данные и вернуться с ответом</option>
+              <option>Согласовать просмотр</option><option>Уточнить условия бронирования</option><option>Продолжить поиск</option>
+            </select>
+            <label for="follow-up-date">К какой дате</label>
+            <input id="follow-up-date" type="date">
+            <label for="follow-up-note">Что именно сделать</label>
+            <input id="follow-up-note" maxlength="180" placeholder="Например, подтвердить дату ключей по кандидату">
+            <p id="follow-up-status" class="footnote" aria-live="polite"></p>
           </section>
           <div class="answer">
-            <label for="confirmed">Ответ клиента</label>
+            <label for="confirmed">Ответ клиента · только у менеджера</label>
             <textarea id="confirmed" rows="4" placeholder="Запишите ответ словами клиента"></textarea>
           </div>
         </div>
         <div class="controls">
           <button id="next" type="button" class="primary">Далее</button>
+          <button id="skip-scene" type="button" class="secondary" hidden>Пропустить эпизод</button>
+          <button id="jump-to-selection" type="button" class="secondary" hidden>К критериям подбора</button>
           <button id="back" type="button" class="secondary">Назад</button>
         </div>
-        <p class="footnote">Ответ виден только менеджеру. Для репетиции используйте вымышленные данные.</p>
+        <p class="footnote">Рабочие поля видит менеджер.</p>
       </aside>
     </main>
   </div>
+  <dialog id="project-hub" class="project-hub" aria-labelledby="hub-title">
+    <header class="hub-header">
+      <div>
+        <p class="scene-label">Самолёт · Москва и Московская область</p>
+        <h2 id="hub-title">Проекты под запрос клиента</h2>
+        <p id="hub-priority"></p>
+        <p id="hub-resume" class="footnote" hidden></p>
+      </div>
+      <form method="dialog"><button type="submit" class="secondary">Закрыть</button></form>
+    </header>
+    <div id="hub-projects" class="hub-projects"></div>
+    <footer class="hub-footer">«Эко Бунино» закреплён для демо. По каждому ЖК отдельно сверяем лот, маршрут и срок въезда.</footer>
+  </dialog>
 </body>
 </html>

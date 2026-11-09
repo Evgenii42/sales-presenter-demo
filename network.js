@@ -112,7 +112,7 @@ export function startNetworkManager(startPresentation) {
       await set(target, {
         ownerUid: user.uid,
         createdAt: serverTimestamp(),
-        state: { scene: "U01", position: { block: "intro", offset: 0 } }
+        state: { scene: "P01", position: { block: "intro", offset: 0 } }
       });
       if (check !== generation) return;
       const publisher = statePublisher(ref(database, `shows/${session}/state`), () => {

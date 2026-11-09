@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+  <defs><pattern id="tile" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M30 0H0v30" fill="none" stroke="#9bb3c7" opacity=".42"/></pattern></defs>
+  <path fill="#dce8ee" d="M0 0h960v540H0z"/><path fill="url(#tile)" d="M0 0h960v540H0z"/>
+  <path d="M68 143h242v281H68z" fill="#b8d2bf"/><path d="M106 225h190v140H106z" fill="#edf4f3"/>
+  <path d="M313 135h339v281H313zm342 30h234v250H655z" fill="#f5f6f1" stroke="#33516a" stroke-width="8"/>
+  <path d="M372 148h216v118H372z" fill="#a8bccb" stroke="#33516a" stroke-width="6"/>
+  <path d="M437 152h86v99h-86z" fill="#d5e4ed" stroke="#59758a" stroke-width="3"/><path d="M480 152v99" stroke="#59758a" stroke-width="3"/>
+  <path d="M683 211h180v138H683z" fill="#eadcca" stroke="#927d69" stroke-width="4"/><path d="M681 315h76" stroke="#f5f6f1" stroke-width="9"/>
+  <path d="M173 367h148v-35h159v-67m0 67h181v35h126" fill="none" stroke="#087dea" stroke-width="7" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="1 13"/>
+  <g fill="#087dea" stroke="#fff" stroke-width="5"><circle cx="173" cy="367" r="13"/><circle cx="480" cy="265" r="13"/><circle cx="787" cy="367" r="13"/></g>
+</svg>
