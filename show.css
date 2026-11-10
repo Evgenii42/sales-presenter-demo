@@ -82,6 +82,19 @@ body { margin: 0; height: 100dvh; display: grid; grid-template-rows: auto minmax
   box-shadow: 0 24px 100px #132c5960;
 }
 .project-hub::backdrop { background: #16264480; backdrop-filter: blur(3px); }
+.copy-switch { display: inline-flex; align-items: center; gap: 5px; font-size: .8rem; }
+.copy-switch select { padding: 5px 7px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: inherit; font: inherit; }
+.copy-comparison .hub-header { position: sticky; top: 0; background: #fff; z-index: 1; }
+.copy-comparison table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0 0 1rem; font-size: .88rem; }
+.copy-comparison h3 { margin: 1rem 0 .5rem; font-size: 1rem; }
+.copy-comparison th, .copy-comparison td { padding: 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.copy-comparison th:first-child { width: 13%; }
+.copy-comparison .copy-edited { background: #eef6ff; }
+.copy-comparison { width: min(1100px, calc(100% - 24px)); }
+@media (max-width: 640px) {
+  #copy-comparison-body { overflow-x: auto; }
+  .copy-comparison table { min-width: 800px; }
+}
 .hub-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
 .hub-header h2 { margin: .18em 0; font-size: clamp(1.4rem, 3vw, 2.2rem); letter-spacing: -.025em; }
 #hub-priority { margin: 4px 0 0; color: var(--muted); }

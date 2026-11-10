@@ -5,21 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Самолёт · Панель менеджера</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="show.css?v=0.6.1">
-  <script src="startup.js?v=0.6.1" defer></script>
-  <script src="network-config.js?v=0.6.1" defer></script>
-  <script src="catalog-share.js?v=0.6.1" defer></script>
-  <script src="story-public.js?v=0.6.1" defer></script>
-  <script src="projects.js?v=0.6.1" defer></script>
-  <script src="audience-story.js?v=0.6.1" defer></script>
-  <script src="eco-layouts.js?v=0.6.1" defer></script>
-  <script src="living-scenes.js?v=0.6.1" defer></script>
-  <script src="visual-context.js?v=0.6.1" defer></script>
-  <script src="story-manager.js?v=0.6.1" defer></script>
-  <script src="show.js?v=0.6.1" defer></script>
-  <script src="route-planner.js?v=0.6.1" defer></script>
-  <script src="meeting-selection.js?v=0.6.1" defer></script>
-  <script src="manager.js?v=0.6.1" defer></script>
+  <link rel="stylesheet" href="show.css?v=0.9.0">
+  <script src="startup.js?v=0.9.0" defer></script>
+  <script src="network-config.js?v=0.9.0" defer></script>
+  <script src="catalog-share.js?v=0.9.0" defer></script>
+  <script src="story-public.js?v=0.9.0" defer></script>
+  <script src="projects.js?v=0.9.0" defer></script>
+  <script src="audience-story.js?v=0.9.0" defer></script>
+  <script src="eco-layouts.js?v=0.9.0" defer></script>
+  <script src="living-scenes.js?v=0.9.0" defer></script>
+  <script src="visual-context.js?v=0.9.0" defer></script>
+  <script src="story-manager.js?v=0.9.0" defer></script>
+  <script src="kimi-copy.js?v=0.9.0" defer></script>
+  <script src="kimi-manager-copy.js?v=0.9.0" defer></script>
+  <script src="revised-copy.js?v=0.9.0" defer></script>
+  <script src="gemini-copy.js?v=0.9.0" defer></script>
+  <script src="gemini-manager-copy.js?v=0.9.0" defer></script>
+  <script src="show.js?v=0.9.0" defer></script>
+  <script src="route-planner.js?v=0.9.0" defer></script>
+  <script src="meeting-selection.js?v=0.9.0" defer></script>
+  <script src="manager.js?v=0.9.0" defer></script>
 </head>
 <body data-role="manager">
   <section id="startup-notice" class="startup-notice" aria-label="Загрузка показа">
@@ -34,6 +39,15 @@
     </div>
     <div class="connection" id="show-actions" hidden>
       <span id="status" role="status">Клиентский экран закрыт</span>
+      <label class="copy-switch">Текст
+        <select id="copy-edition">
+          <option value="gemini">Gemini 3.8 Flash</option>
+          <option value="revised">Рабочая редакция v0.8</option>
+          <option value="">Исходная v0.7</option>
+          <option value="kimi">Редакция Kimi v0.7</option>
+        </select>
+      </label>
+      <button id="compare-copy" class="secondary" type="button">Сравнить текст</button>
       <button id="open-hub" class="secondary" type="button" hidden>Проекты ↔</button>
       <a id="client-link" class="button secondary" target="_blank" rel="noopener">Открыть клиентский экран ↗</a>
       <button id="sign-out" type="button" hidden>Завершить показ и выйти</button>
@@ -73,7 +87,7 @@
   </main>
   <div id="workspace" class="layout" hidden>
     <aside class="rail" aria-label="Маршрут показа">
-      <div class="rail-title">История v0.6</div>
+      <div class="rail-title">История v0.9</div>
       <p id="run-progress" class="rail-progress"></p>
       <ol id="chapters" class="steps"></ol>
       <details class="rehearsal" open>
@@ -293,6 +307,7 @@
           </fieldset>
           <div id="branch-options" class="branch-options" hidden></div>
           <section id="hub-suggestions" class="hub-suggestions" aria-label="Проекты для сравнения" hidden></section>
+          <p id="first-lot-check" class="manager-outcome" hidden></p>
           <fieldset id="catalog-filters" class="catalog-filters" hidden>
             <legend>Согласованные параметры</legend>
             <label for="room-count">Количество комнат</label>
@@ -367,6 +382,16 @@
       </aside>
     </main>
   </div>
+  <dialog id="copy-comparison" class="project-hub copy-comparison" aria-labelledby="copy-comparison-title">
+    <header class="hub-header">
+      <div>
+        <h2 id="copy-comparison-title">Сравнение редакций</h2>
+        <p id="copy-comparison-scene" class="footnote"></p>
+      </div>
+      <form method="dialog"><button type="submit" class="secondary">Закрыть</button></form>
+    </header>
+    <div id="copy-comparison-body"></div>
+  </dialog>
   <dialog id="project-hub" class="project-hub" aria-labelledby="hub-title">
     <header class="hub-header">
       <div>

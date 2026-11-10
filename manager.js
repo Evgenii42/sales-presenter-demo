@@ -19,6 +19,7 @@ const openingCues = {
     title: "Начните с цели покупки", seconds: 12,
     cue: "«Я … из „Самолёта“. Начнём с того, что вы хотите получить от покупки, а потом сравним адреса и планировки по вашей задаче».",
     action: "Представьтесь и согласуйте время встречи. Если цель уже известна, подтвердите её в разговоре при сверке запроса.",
+    revisedAction: "Представьтесь и коротко скажите, с чего начнётся показ. Если цель уже известна, подтвердите её при сверке запроса.",
     outcome: "Клиент понимает, что показ начнётся с его задачи."
   },
   P02: {
@@ -97,6 +98,40 @@ const topicScenes = {
   outdoors: 1, health: 1, shops: 1, sport: 1, parking: 1, access: 1, storage: 2, finish: 3
 };
 const ecoTopicScenes = { school: "U06", daycare: "U06", commute: "U06", work: "U10", sale: "U15", rent: "U15" };
+const firstLotChecks = {
+  school: "Проверьте путь от подъезда до входа в школу и дальше до нужного адреса. Условия приёма уточните отдельно.",
+  daycare: "Проверьте путь от подъезда до входа в выбранный сад и дальше по утреннему маршруту. Наличие места уточните отдельно.",
+  commute: "На карте сравните путь от подъезда до нужного адреса в обычное время и согласованным способом.",
+  work: "На плане проверьте место для стола и стула, свободный проход и возможность закрыть дверь.",
+  sale: "Сравните план, этаж и отделку с похожими предложениями на одну дату. Отдельно запишите возможные расходы.",
+  rent: "По карточке уточните, что нужно докупить к первому въезду. Сопоставьте расходы и похожие предложения на одну дату.",
+  outdoors: "Проверьте на карте путь от подъезда до места для прогулки.",
+  health: "Проверьте путь от подъезда до нужной поликлиники или аптеки и уточните режим работы.",
+  shops: "Проверьте по карте, можно ли зайти в нужный магазин по дороге домой.",
+  sport: "Уточните расписание нужной секции и проверьте путь от подъезда.",
+  parking: "Сверьте условия парковки и маршрут от нужного корпуса через подходящий выезд.",
+  access: "По схеме секции или на просмотре проверьте пороги, двери и лифт.",
+  storage: "На плане проверьте место для самой крупной вещи и свободный проход.",
+  finish: "Сверьте состав отделки и дату ключей по конкретной квартире."
+};
+const confirmedIntroCues = {
+  school: "«Вы говорили, что важна дорога до школы. Начнём с маршрута от подъезда до школьного входа».",
+  daycare: "«Вы говорили, что важен детский сад. Посмотрим, как дорога через него впишется в ваше утро».",
+  commute: "«Вы назвали важный для вас маршрут. Посчитаем дорогу от подъезда в привычное время».",
+  work: "«Вы говорили, что нужно место для работы дома. Посмотрим на плане, где встанет стол и можно ли закрыть дверь».",
+  sale: "«Вы хотите учесть возможную продажу. Покажу план и объясню, с какими квартирами его сравним».",
+  rent: "«Вы выбираете квартиру под аренду. Посмотрим, что понадобится подготовить к первому въезду жильца»."
+};
+const livingLotChecks = {
+  "self-family": "Посмотрите, где ребёнок сможет заниматься, пока взрослые пользуются общей комнатой.",
+  "self-no-children": "Посмотрите, где можно поставить стол или оставить отдельное место для отдыха.",
+  upgrade: "Проверьте, какая комната или зона решает то, чего не хватает дома сейчас.",
+  parents: "Проверьте на плане проход от входа до кухни и уточните пороги в секции.",
+  "child-home": "Проверьте на плане место для стола и кровати. Сверьте срок ключей и обычный маршрут.",
+  rent: firstLotChecks.rent,
+  resale: firstLotChecks.sale,
+  independent: "Сверьте, есть ли место для сна, готовки и хранения. Отдельно оцените расходы на въезд."
+};
 const comparisonCues = {
   X01: ["Представьте адрес", "«Сравним этот адрес по тем же условиям»."],
   X02: ["Продолжите разговор о дороге", "«Проверим, как выглядел бы тот же маршрут отсюда»."],
@@ -201,6 +236,42 @@ function startManager(session, send) {
   let mouse;
   let frame = null;
   const hub = byId("project-hub");
+  const copyDialog = byId("copy-comparison");
+  const copyEdition = byId("copy-edition");
+  const cueFields = [["cue-title", "Подсказка"], ["cue", "Реплика"], ["cue-action", "Действие"], ["cue-outcome", "Результат"], ["cue-proof", "Проверка"]];
+  const requestedEdition = new URLSearchParams(location.search).get("edition");
+  copyEdition.value = requestedEdition === "base" ? ""
+    : ["kimi", "revised", "gemini"].includes(requestedEdition) ? requestedEdition : "gemini";
+  const edition = () => copyEdition.value;
+
+  function setCueCopy(id, original, revised = "") {
+    const element = byId(id);
+    element.dataset.copy = original;
+    element.dataset.revised = revised;
+    element.textContent = copyLine(original, edition(), revised);
+  }
+
+  function compareCopy() {
+    const client = comparisonFrameCopy();
+    const manager = cueFields.map(([id, label]) => [label, byId(id).dataset.copy, "", byId(id).dataset.revised]).filter(([, original]) => original);
+    if (["U19", "U20"].includes(currentScene)) {
+      manager.push(["Первый лот", "—", "", firstLotCheckText(meetingRequest())]);
+    }
+    byId("copy-comparison-scene").textContent = `Кадр ${currentScene} · одинаковые вводные и визуал`;
+    const table = (heading, items) => `<h3>${heading}</h3><table>
+      <thead><tr><th scope="col">Элемент</th><th scope="col">Исходная v0.7</th><th scope="col">Редакция Kimi</th><th scope="col">Рабочая v0.8</th><th scope="col">Gemini 3.8 Flash</th></tr></thead>
+      <tbody>${items.map(([label, original, prefix = "", revised]) => {
+        const working = copyLine(original, "revised", revised);
+        const columns = ["", "kimi", "revised", "gemini"].map((version) => {
+          const text = copyLine(original, version, revised);
+          const reference = version === "gemini" ? working : original;
+          return `<td${reference !== text ? ' class="copy-edited"' : ""}>${escaped(prefix + text)}</td>`;
+        }).join("");
+        return `<tr><th scope="row">${label}</th>${columns}</tr>`;
+      }).join("")}</tbody></table>`;
+    byId("copy-comparison-body").innerHTML = table("Клиентский экран", client) + table("Реплики и подсказки менеджера", manager);
+    copyDialog.showModal();
+  }
 
   const sceneKey = (id = currentScene, project = currentProject) => project === demoProject ? id : `${project}/${id}`;
 
@@ -250,6 +321,7 @@ function startManager(session, send) {
     const accent = living ? 0 : accents.get(sceneKey());
     send({
       scene: currentScene, position: currentPosition(), point: currentPoint(),
+      ...(edition() && { edition: edition() }),
       ...(currentProject !== demoProject && { project: currentProject }),
       ...(living && { living }),
       ...(currentLivingApproximate && { livingApproximate: true }),
@@ -375,8 +447,8 @@ function startManager(session, send) {
   function showTravelCue() {
     const choice = visualContexts.U05[accents.get("U05") - 1];
     const [cue, action] = travelCues[choice?.branch] || [managerStory.scenes.U05.cue, managerStory.scenes.U05.action];
-    byId("cue").textContent = cue;
-    byId("cue-action").textContent = action;
+    setCueCopy("cue", cue);
+    setCueCopy("cue-action", action);
   }
 
   function selectedIntroAccent() {
@@ -416,10 +488,10 @@ function startManager(session, send) {
     const summary = [purpose, household, topic].filter(Boolean).join(" · ");
     byId("intake-summary").textContent = summary ? `Из учебной заявки · ${summary}` : "";
     byId("intake-summary").hidden = !summary || intakeEditing;
-    byId("cue").textContent = verify ? `«Правильно понимаю, что сейчас главное — ${topic.toLowerCase()}?»`
+    setCueCopy("cue", verify ? `«Правильно понимаю, что сейчас главное — ${topic.toLowerCase()}?»`
       : byId("intake-purpose").hidden ? "«Что сильнее всего повлияет на выбор?»"
-      : byId("intake-topic").hidden ? "«Для кого выбираете квартиру?»" : openingCues.P04.cue;
-    byId("cue-action").textContent = verify ? "Подтвердите одну задачу в разговоре. Если она изменилась, уточните вводные." : openingCues.P04.action;
+      : byId("intake-topic").hidden ? "«Для кого выбираете квартиру?»" : openingCues.P04.cue);
+    setCueCopy("cue-action", verify ? "Подтвердите одну задачу в разговоре. Если она изменилась, уточните вводные." : openingCues.P04.action);
     byId("next").textContent = route.at(-1).editingRequest ? "Сохранить и вернуться"
       : verify ? "Подтвердить и выбрать проект" : "К выбору проекта";
     showIntakePreview();
@@ -503,6 +575,21 @@ function startManager(session, send) {
     ].filter(Boolean);
   }
 
+  function firstLotCheckText(request) {
+    if (request.priority) {
+      return firstLotChecks[request.topic] || "Выберите план, карту или просмотр, чтобы сверить это условие.";
+    }
+    const suggestion = livingLotChecks[selectedLiving()];
+    return suggestion ? `Предложите эту проверку клиенту. ${suggestion}`
+      : "Если есть обязательное условие, согласуйте его до открытия каталога.";
+  }
+
+  function showFirstLotCheck(request) {
+    const check = byId("first-lot-check");
+    check.hidden = !["revised", "gemini"].includes(edition()) || !["U19", "U20"].includes(currentScene);
+    check.textContent = `Первая квартира. ${copyLine(firstLotCheckText(request), edition())}`;
+  }
+
   function admissionKey(project, topic) {
     return `${project}/${topic}`;
   }
@@ -575,7 +662,7 @@ function startManager(session, send) {
     layoutLibrary.show(project === demoProject && (id === "U09" || id === "U19"), lot, librarySelection);
     byId("living-profile-fields").hidden = !show;
     byId("living-profile").value = key;
-    byId("living-fit").textContent = profile?.fit || "Уточните, кто будет жить и какой сценарий для него важен.";
+    byId("living-fit").textContent = copyLine(profile?.fit || "Уточните, кто будет жить и какой сценарий для него важен.", edition());
     byId("living-suggestion").hidden = id !== "U19" || !profile;
     if (lot) {
       byId("living-suggestion-text").textContent = `Для этой задачи рассмотрите вариант: ${lot.type.toLowerCase()}.`;
@@ -705,7 +792,10 @@ function startManager(session, send) {
     }
   }
 
-  function show() {
+  function show(keepScroll = false) {
+    const previousScroll = stage.scrollTop;
+    const tools = document.querySelector(".tools-fields");
+    const previousToolsScroll = tools.scrollTop;
     const current = route.at(-1);
     const { id, project, lifePreview, librarySelection } = current;
     const comparison = comparisonCues[id];
@@ -720,7 +810,7 @@ function startManager(session, send) {
     const phase = phaseFor(id);
     mouse = undefined;
     byId("manager-mode").textContent = phase < 0 ? "Самолёт · Общая презентация" : `Проект · ${hubProjects[project].name}`;
-    renderScene(id, project, living, lifePreview?.approximate);
+    renderScene(id, project, living, lifePreview?.approximate, edition());
     if (id === "U15") accents.set("U15", { sale: 1, rent: 2 }[answers.future] || 0);
     applyVisualAccent(accents.get(sceneKey()));
     if (id === "U20") {
@@ -745,32 +835,38 @@ function startManager(session, send) {
       : comparison ? `Сравнение · ${phase + 1}/${projectSceneOrder.length}`
       : `Сцена ${index + 1} из ${order.length}`;
     byId("cue-meta").textContent = `Только у менеджера · ${scene.seconds} с`;
-    byId("cue-title").textContent = scene.title;
-    byId("cue").textContent = scene.cue;
-    byId("cue-action").textContent = scene.action;
-    byId("cue-outcome").textContent = scene.outcome;
-    byId("cue-proof").textContent = scene.proof || "";
+    setCueCopy("cue-title", scene.title);
+    setCueCopy("cue", scene.cue);
+    setCueCopy("cue-action", scene.action, scene.revisedAction);
+    setCueCopy("cue-outcome", scene.outcome);
+    setCueCopy("cue-proof", scene.proof || "");
     if (lifePreview?.approximate) {
-      byId("cue-proof").textContent = `Выбрали №${lifePreview.lot.id}. На экране пример для №${lifePreview.plan.id} · ${lifePreview.plan.area} м². Расстановку сверяйте по выбранному плану.`;
+      setCueCopy("cue-proof", `Выбрали №${lifePreview.lot.id}. На экране пример для №${lifePreview.plan.id} · ${lifePreview.plan.area} м². Расстановку сверяйте по выбранному плану.`);
     }
     const request = meetingRequest();
     if (id === "U01") {
-      byId("cue").textContent = "«Это Эко Бунино в Новой Москве, на проспекте Куприна. Начнём с того, что для вас важно, и проверим это на конкретном варианте».";
+      setCueCopy("cue", "«Это Эко Бунино в Новой Москве, на проспекте Куприна. Начнём с того, что для вас важно, и проверим это на конкретном варианте».",
+        confirmedTopic && (confirmedIntroCues[confirmedTopic] || "«Начнём с вашего главного условия и проверим его на этом адресе»."));
     }
+    if (id === "U19") setCueCopy("cue-action", scene.action, "Сверьте число комнат и верхнюю цену. Согласуйте, что проверите у первой квартиры.");
+    showFirstLotCheck(request);
     const sources = byId("cue-sources");
     sources.hidden = !(id === "U01" || id === "X02" || branch?.branch.id === "F01");
     if (!sources.hidden) {
       const focus = branch?.branch.id === "F01" ? "school" : request.topic;
       const fact = hubCriteria[project]?.[focus];
       if (fact && (!branch || id === "F01.1")) {
-        byId("cue-proof").textContent = fact + ". Маршрут, доступ и применимость к корпусу сверяем отдельно.";
+        setCueCopy("cue-proof", fact + ". Маршрут, доступ и применимость к корпусу сверяем отдельно.");
       }
       const schoolSource = focus === "school" && hubSchoolSources[project];
       sources.innerHTML = externalLink(hubProjects[project].page, "Справка о квартале")
         + (schoolSource ? externalLink(schoolSource, "Источник по школе") : "");
     }
     if ((id === "U13" || id === "U19") && request.timing) {
-      byId("cue-proof").textContent += ` Условие клиента · ${request.timing.toLowerCase()}.`;
+      const proof = byId("cue-proof");
+      const condition = ` Условие клиента · ${request.timing.toLowerCase()}.`;
+      proof.dataset.copy += condition;
+      proof.textContent += condition;
     }
     byId("confirmed").value = notes.get(sceneKey()) || "";
     byId("confirmed").closest(".answer").hidden = phase < 0 && id !== "P04";
@@ -798,29 +894,29 @@ function startManager(session, send) {
     byId("intake-fields").hidden = id !== "P04";
     if (id === "P04") showIntake();
     if (id === "U02" && confirmedTopic) {
-      byId("cue").textContent = "«Покажу, как это влияет на ваш обычный день».";
-      byId("cue-action").textContent = "Вернитесь к уже подтверждённой задаче. Уточните только деталь, которая меняет маршрут или планировку.";
+      setCueCopy("cue", "«Покажу, как это влияет на ваш обычный день».");
+      setCueCopy("cue-action", "Вернитесь к уже подтверждённой задаче. Уточните только деталь, которая меняет маршрут или планировку.");
       byId("next").textContent = "Далее";
     }
     if (id === "U03" && (confirmedTopic === "sale" || confirmedTopic === "rent")) {
-      byId("cue").textContent = "«Возьмём этот вопрос с собой и проверим его, когда дойдём до конкретных вариантов».";
-      byId("cue-action").textContent = "Горизонт уже обсудили. Продолжите, если планы не изменились.";
+      setCueCopy("cue", "«Возьмём этот вопрос с собой и проверим его, когда дойдём до конкретных вариантов».");
+      setCueCopy("cue-action", "Горизонт уже обсудили. Продолжите, если планы не изменились.");
     } else if (id === "U03" && answers.purpose === "investment") {
-      byId("cue").textContent = "«Что важнее для покупки — оценить аренду или будущую продажу?»";
-      byId("cue-action").textContent = "Сохраните выбранную задачу для подходящей ветки. Если клиент ещё выбирает, оставьте оба варианта для обсуждения.";
+      setCueCopy("cue", "«Что важнее для покупки — оценить аренду или будущую продажу?»");
+      setCueCopy("cue-action", "Сохраните выбранную задачу для подходящей ветки. Если клиент ещё выбирает, оставьте оба варианта для обсуждения.");
     }
     if (id === "U15" && !["sale", "rent"].includes(get("future"))) {
-      byId("cue").textContent = "«Если понадобится переехать, к этому вопросу можно вернуться отдельно».";
-      byId("cue-action").textContent = "Пропустите эпизод, если клиент не поднимал вопрос о продаже или аренде.";
+      setCueCopy("cue", "«Если понадобится переехать, к этому вопросу можно вернуться отдельно».");
+      setCueCopy("cue-action", "Пропустите эпизод, если клиент не поднимал вопрос о продаже или аренде.");
     }
     const isInvestment = answers.purpose === "investment" || Boolean(investmentGoals[answers.purpose]);
     if (["U03", "U15"].includes(id) && isInvestment) {
-      byId("cue").textContent = "«Сверим, какие данные нужны вам для решения о покупке».";
-      byId("cue-action").textContent = id === "U15" ? "Откройте ветку по основной цели покупки. Сопоставимые предложения дают ориентир на дату проверки."
-        : "Подтвердите цель. Подробности можно обсудить после примерки планировки.";
+      setCueCopy("cue", "«Сверим, какие данные нужны вам для решения о покупке».");
+      setCueCopy("cue-action", id === "U15" ? "Откройте ветку по основной цели покупки. Сопоставимые предложения дают ориентир на дату проверки."
+        : "Подтвердите цель. Подробности можно обсудить после примерки планировки.");
     }
     if (id === "U16" && request.budget > 0) {
-      byId("cue").textContent = `«За квартиру берём предел ${request.budget.toLocaleString("ru-RU")} ₽. Отдельно проверим, сколько понадобится на въезд».`;
+      setCueCopy("cue", `«За квартиру берём предел ${request.budget.toLocaleString("ru-RU")} ₽. Отдельно проверим, сколько понадобится на въезд».`);
     }
     byId("household-fields").hidden = id !== "U02";
     byId("future-fields").hidden = !["U03", "U15"].includes(id) || Boolean(investmentGoals[answers.purpose]);
@@ -854,7 +950,8 @@ function startManager(session, send) {
     showRouteControls(id, project);
     showMeetingSummary();
     if (["F01.4", "F02.4"].includes(id)) byId("meeting-summary").open = true;
-    document.querySelector(".tools-fields").scrollTop = 0;
+    tools.scrollTop = keepScroll ? previousToolsScroll : 0;
+    if (keepScroll) stage.scrollTop = previousScroll;
     if (librarySelection) {
       delete current.librarySelection;
       const previewButton = byId("layout-library-life");
@@ -1006,6 +1103,8 @@ function startManager(session, send) {
   }
   byId("back").addEventListener("click", back, options);
   byId("restart-story").addEventListener("click", restart, options);
+  copyEdition.addEventListener("change", () => show(true), options);
+  byId("compare-copy").addEventListener("click", compareCopy, options);
   byId("jump-to-selection").addEventListener("click", () => go("U19"), options);
   byId("review-future").addEventListener("click", () => {
     go("U15", demoProject, undefined, false, currentScene);
@@ -1037,6 +1136,7 @@ function startManager(session, send) {
   byId("priority").addEventListener("input", () => {
     byId("lead-detail").value = get("priority");
     showMeetingSummary();
+    showFirstLotCheck(meetingRequest());
   }, options);
   byId("lead-purpose").addEventListener("change", updateIntakeArtwork, options);
   byId("lead-topic").addEventListener("change", updateIntakeArtwork, options);
@@ -1113,6 +1213,7 @@ function startManager(session, send) {
     publish,
     close() {
       hub.close();
+      copyDialog.close();
       routePlanner.reset();
       meetingSelection.reset();
       admissions.clear();

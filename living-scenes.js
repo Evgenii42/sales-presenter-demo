@@ -198,7 +198,9 @@ function livingFrame(id, key) {
     return {
       title: profile.planTitle, artwork: `exact-${lot.id}`, captions: profile.planLabels,
       points: exactPlanPoints[key],
-      source: lot.url, context: `${lot.type} · ${lot.area} м². На примере посмотрим, как помещается то, что вам важно.`
+      source: lot.url,
+      contextPrefix: `${lot.type} · ${lot.area} м². `,
+      context: "На примере посмотрим, как помещается то, что вам важно."
     };
   }
   return {

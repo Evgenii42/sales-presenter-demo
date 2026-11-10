@@ -7,6 +7,23 @@ let currentLiving = "";
 let currentLivingApproximate = false;
 let currentAccent = 0;
 let pointer;
+let currentEdition = "";
+
+function copyLine(value, edition, revised) {
+  const working = edition === "revised" || edition === "gemini"
+    ? revised || revisedCopy[value] || value : value;
+  if (typeof working !== "string" || !["gemini", "kimi"].includes(edition)) return working;
+  const publicCopy = edition === "gemini" ? geminiCopy : kimiCopy;
+  if (Object.hasOwn(publicCopy, working)) return publicCopy[working];
+  if (manager) {
+    const privateCopy = edition === "gemini" ? geminiManagerCopy : kimiManagerCopy;
+    if (Object.hasOwn(privateCopy, working)) return privateCopy[working];
+  }
+  if (working.startsWith("«") && working.endsWith("»")) {
+    return `«${copyLine(working.slice(1, -1), edition)}»`;
+  }
+  return working;
+}
 
 function escaped(value) {
   return String(value).replace(/[&<>"']/g, (character) =>
@@ -56,12 +73,12 @@ function renderCompanyEvidence() {
     ${companyEvidence.map(({ eyebrow, title, caption, description, image, alt, url, link }) => `<article>
       <figure class="company-evidence-visual">
         <img class="company-evidence-image" src="media/${escaped(image)}" alt="${escaped(alt)}" width="1600" height="900">
-        <figcaption>${escaped(caption)}</figcaption>
+        <figcaption>${escaped(copyLine(caption, currentEdition))}</figcaption>
       </figure>
       <div class="company-evidence-copy">
         <p class="scene-label">${escaped(eyebrow)}</p>
-        <h2>${escaped(title)}</h2>
-        <p>${escaped(description)}</p>
+        <h2>${escaped(copyLine(title, currentEdition))}</h2>
+        <p>${escaped(copyLine(description, currentEdition))}</p>
         ${externalLink(url, link)}
       </div>
     </article>`).join("")}
@@ -89,14 +106,20 @@ function artworkUrl(artwork) {
   return `media/${art.file || `${artwork}.${art.type}`}`;
 }
 
+function frameCaptions(frame, option) {
+  const captions = [...(option?.labels || frame.captions)];
+  if (option?.label) captions[option.step - 1] = option.label;
+  return captions;
+}
+
 function renderArtwork(frame, option) {
   const artwork = option?.artwork || frame.artwork;
   const art = audienceArt[artwork];
-  const captions = [...(option?.labels || frame.captions)];
+  const captions = frameCaptions(frame, option);
   const points = option ? option.points : frame.points;
   const focus = option ? option.step - 1 : frame.focus;
-  if (option?.label) captions[focus] = option.label;
-  const labels = captions.map((caption, i) => {
+  const labels = captions.map((original, i) => {
+    const caption = copyLine(original, currentEdition);
     if (!caption) return "";
     const active = i === focus ? " is-accent" : "";
     const point = points?.[i];
@@ -114,14 +137,16 @@ function renderArtwork(frame, option) {
     <ul class="frame-notes" aria-label="Подписи к изображению">${labels.join("")}</ul>`;
 }
 
-function renderScene(id, project = demoProject, living = "", approximate = false) {
+function renderScene(id, project = demoProject, living = "", approximate = false, edition = "") {
   const profile = project === demoProject && isLivingScene(id) && Object.hasOwn(livingProfiles, living)
     ? living : "";
   const livingApproximate = id === "U10" && Boolean(profile) && approximate === true;
-  if (currentScene === id && currentProject === project && currentLiving === profile && currentLivingApproximate === livingApproximate) return;
+  edition = ["kimi", "revised", "gemini"].includes(edition) ? edition : "";
+  if (currentScene === id && currentProject === project && currentLiving === profile && currentLivingApproximate === livingApproximate && currentEdition === edition) return;
   const alternative = projectScenes[id];
   const scene = alternative || publicStory.scenes[id];
   const frame = profile ? livingFrame(id, profile) : alternative || frameFor(scene);
+  currentEdition = edition;
   const artwork = id === "P02" ? null : renderArtwork(frame);
   const place = hubProjects[project];
   const phase = phaseFor(id);
@@ -145,13 +170,13 @@ function renderScene(id, project = demoProject, living = "", approximate = false
   }
   stage.innerHTML = `<article class="story eco-story${id === "P01" ? " company-cover" : ""}" data-scene="${id}" data-project="${project}"${profile ? ` data-living="${profile}"` : ""}>
     <header class="story-block scene-heading" data-anchor="intro">
-      <h1>${escaped(id === "X01" ? `${place.name}. ${frame.title}` : frame.title)}</h1>
-      ${id === "P01" ? `<p class="company-intro">${escaped(scene.context)}</p>` : ""}
+      <h1>${escaped((id === "X01" ? `${place.name}. ` : "") + copyLine(frame.title, edition))}</h1>
+      ${id === "P01" ? `<p class="company-intro">${escaped(copyLine(scene.context, edition))}</p>` : ""}
     </header>
     ${artwork ? `<figure class="scene-frame story-block${profile && id === "U09" ? " exact-layout" : ""}" data-anchor="visual" aria-live="polite">${artwork}</figure>` : renderCompanyEvidence()}
     ${id === "U20" ? renderSelection() : ""}
     ${id === "P01" ? "" : `<section class="detail story-block" data-anchor="detail">
-      ${scene.gate ? "" : `<p data-scene-context>${livingApproximate ? "<strong>Пример на другой квартире той же комнатности.</strong> " : ""}${escaped(frame.context || scene.context)}</p>`}
+      ${scene.gate ? "" : `<p data-scene-context>${livingApproximate ? "<strong>Пример на другой квартире той же комнатности.</strong> " : ""}${escaped((frame.contextPrefix || "") + copyLine(frame.context || scene.context, edition))}</p>`}
       ${material}
       ${id === "U01" ? '<span id="scene-evidence"></span>' : ""}
     </section>`}
@@ -170,12 +195,27 @@ function applyVisualAccent(index) {
   if (currentAccent === accent) return;
   currentAccent = accent;
   const frame = alternative || frameFor(scene);
-  anchor("intro").querySelector("h1").textContent = option?.title || frame.title;
+  anchor("intro").querySelector("h1").textContent = copyLine(option?.title || frame.title, currentEdition, option?.revisedTitle);
   anchor("visual").innerHTML = renderArtwork(frame, option);
-  stage.querySelector("[data-scene-context]").textContent = option?.context || scene.context;
+  stage.querySelector("[data-scene-context]").textContent = copyLine(option?.context || scene.context, currentEdition, option?.revisedContext);
   if (currentScene === "U01") {
     byId("scene-evidence").innerHTML = option?.topic === "school" ? externalLink("https://t.me/s/school338official/24648?q=%23%D0%92%D0%A1%D0%95%D0%9B%D0%95%D0%9D%D0%9D%D0%90%D0%AF338", "Площадка «Альфа» · школа №338") : "";
   }
+}
+
+function comparisonFrameCopy() {
+  const scene = projectScenes[currentScene] || publicStory.scenes[currentScene];
+  const frame = currentLiving ? livingFrame(currentScene, currentLiving) : projectScenes[currentScene] || frameFor(scene);
+  const option = currentAccent ? visualContexts[currentScene]?.[currentAccent - 1] : undefined;
+  const items = [["Заголовок", option?.title || frame.title, "", option?.revisedTitle]];
+  if (currentScene === "P02") {
+    for (const card of companyEvidence) items.push(["Карточка", card.title], ["Подпись", card.caption], ["Текст", card.description]);
+  } else {
+    for (const caption of frameCaptions(frame, option)) if (caption) items.push(["Подпись", caption]);
+  }
+  const context = option?.context || frame.context || scene.context;
+  if (!scene.gate && context) items.push(["Текст", context, frame.contextPrefix, option?.revisedContext]);
+  return items;
 }
 
 function anchor(name) {
@@ -203,10 +243,10 @@ function applyPublicState(state) {
   const { scene, project } = state;
   if (Object.hasOwn(projectScenes, scene)) {
     if (!Object.hasOwn(hubProjects, project) || project === demoProject) return;
-    renderScene(scene, project);
+    renderScene(scene, project, "", false, state.edition);
   } else {
     if (!Object.hasOwn(publicStory.scenes, scene)) return;
-    renderScene(scene, demoProject, state.living, state.livingApproximate);
+    renderScene(scene, demoProject, state.living, state.livingApproximate, state.edition);
   }
   applyVisualAccent(state.accent);
   if (state.scene === "U20") updateCatalogLinks(state.catalog);
