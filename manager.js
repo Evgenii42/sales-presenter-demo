@@ -241,7 +241,7 @@ function startManager(session, send) {
   const cueFields = [["cue-title", "Подсказка"], ["cue", "Реплика"], ["cue-action", "Действие"], ["cue-outcome", "Результат"], ["cue-proof", "Проверка"]];
   const requestedEdition = new URLSearchParams(location.search).get("edition");
   copyEdition.value = requestedEdition === "base" ? ""
-    : ["kimi", "revised", "gemini"].includes(requestedEdition) ? requestedEdition : "gemini";
+    : hasCopyEdition(requestedEdition) ? requestedEdition : "gemini";
   const edition = () => copyEdition.value;
 
   function setCueCopy(id, original, revised = "") {
@@ -258,13 +258,20 @@ function startManager(session, send) {
       manager.push(["Первый лот", "—", "", firstLotCheckText(meetingRequest())]);
     }
     byId("copy-comparison-scene").textContent = `Кадр ${currentScene} · одинаковые вводные и визуал`;
+    const editions = [
+      ["", "Исходная v0.7"],
+      ["kimi", "Редакция Kimi"],
+      ["revised", "Рабочая v0.8"],
+      ["gemini", "Gemini 3.8 Flash"],
+      ["deepseek", "DeepSeek V4.1 Flash"]
+    ];
     const table = (heading, items) => `<h3>${heading}</h3><table>
-      <thead><tr><th scope="col">Элемент</th><th scope="col">Исходная v0.7</th><th scope="col">Редакция Kimi</th><th scope="col">Рабочая v0.8</th><th scope="col">Gemini 3.8 Flash</th></tr></thead>
+      <thead><tr><th scope="col">Элемент</th>${editions.map(([, title]) => `<th scope="col">${title}</th>`).join("")}</tr></thead>
       <tbody>${items.map(([label, original, prefix = "", revised]) => {
         const working = copyLine(original, "revised", revised);
-        const columns = ["", "kimi", "revised", "gemini"].map((version) => {
+        const columns = editions.map(([version]) => {
           const text = copyLine(original, version, revised);
-          const reference = version === "gemini" ? working : original;
+          const reference = ["gemini", "deepseek"].includes(version) ? working : original;
           return `<td${reference !== text ? ' class="copy-edited"' : ""}>${escaped(prefix + text)}</td>`;
         }).join("");
         return `<tr><th scope="row">${label}</th>${columns}</tr>`;
@@ -586,7 +593,7 @@ function startManager(session, send) {
 
   function showFirstLotCheck(request) {
     const check = byId("first-lot-check");
-    check.hidden = !["revised", "gemini"].includes(edition()) || !["U19", "U20"].includes(currentScene);
+    check.hidden = !["revised", "gemini", "deepseek"].includes(edition()) || !["U19", "U20"].includes(currentScene);
     check.textContent = `Первая квартира. ${copyLine(firstLotCheckText(request), edition())}`;
   }
 

@@ -9,16 +9,23 @@ let currentAccent = 0;
 let pointer;
 let currentEdition = "";
 
+const modelCopy = {
+  kimi: { public: kimiCopy, private: manager ? kimiManagerCopy : null },
+  gemini: { public: geminiCopy, private: manager ? geminiManagerCopy : null },
+  deepseek: { public: deepseekCopy, private: manager ? deepseekManagerCopy : null }
+};
+
+function hasCopyEdition(edition) {
+  return edition === "revised" || Object.hasOwn(modelCopy, edition);
+}
+
 function copyLine(value, edition, revised) {
-  const working = edition === "revised" || edition === "gemini"
+  const working = edition !== "kimi" && hasCopyEdition(edition)
     ? revised || revisedCopy[value] || value : value;
-  if (typeof working !== "string" || !["gemini", "kimi"].includes(edition)) return working;
-  const publicCopy = edition === "gemini" ? geminiCopy : kimiCopy;
-  if (Object.hasOwn(publicCopy, working)) return publicCopy[working];
-  if (manager) {
-    const privateCopy = edition === "gemini" ? geminiManagerCopy : kimiManagerCopy;
-    if (Object.hasOwn(privateCopy, working)) return privateCopy[working];
-  }
+  if (typeof working !== "string" || !Object.hasOwn(modelCopy, edition)) return working;
+  const copy = modelCopy[edition];
+  if (Object.hasOwn(copy.public, working)) return copy.public[working];
+  if (copy.private && Object.hasOwn(copy.private, working)) return copy.private[working];
   if (working.startsWith("«") && working.endsWith("»")) {
     return `«${copyLine(working.slice(1, -1), edition)}»`;
   }
@@ -141,7 +148,7 @@ function renderScene(id, project = demoProject, living = "", approximate = false
   const profile = project === demoProject && isLivingScene(id) && Object.hasOwn(livingProfiles, living)
     ? living : "";
   const livingApproximate = id === "U10" && Boolean(profile) && approximate === true;
-  edition = ["kimi", "revised", "gemini"].includes(edition) ? edition : "";
+  edition = hasCopyEdition(edition) ? edition : "";
   if (currentScene === id && currentProject === project && currentLiving === profile && currentLivingApproximate === livingApproximate && currentEdition === edition) return;
   const alternative = projectScenes[id];
   const scene = alternative || publicStory.scenes[id];

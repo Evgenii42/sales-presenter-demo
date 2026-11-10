@@ -90,11 +90,9 @@ body { margin: 0; height: 100dvh; display: grid; grid-template-rows: auto minmax
 .copy-comparison th, .copy-comparison td { padding: 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .copy-comparison th:first-child { width: 13%; }
 .copy-comparison .copy-edited { background: #eef6ff; }
-.copy-comparison { width: min(1100px, calc(100% - 24px)); }
-@media (max-width: 640px) {
-  #copy-comparison-body { overflow-x: auto; }
-  .copy-comparison table { min-width: 800px; }
-}
+.copy-comparison { width: min(1230px, calc(100% - 24px)); }
+#copy-comparison-body { overflow-x: auto; }
+.copy-comparison table { min-width: 920px; }
 .hub-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
 .hub-header h2 { margin: .18em 0; font-size: clamp(1.4rem, 3vw, 2.2rem); letter-spacing: -.025em; }
 #hub-priority { margin: 4px 0 0; color: var(--muted); }
